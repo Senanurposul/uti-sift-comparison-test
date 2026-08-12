@@ -9,7 +9,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../../../../'))
 from sdks.novavision.src.base.component import Component
 from sdks.novavision.src.base.model import KeyPoints, Detection, Connection
 from sdks.novavision.src.helper.executor import Executor
-from components.SiftComparisonTest.src.utils.response import build_response_sift_comparison
+from components.SiftComparisonTest.src.utils.response import build_response_sift_comparison_test
 from components.SiftComparisonTest.src.models.PackageModel import PackageModel
 
 
@@ -67,7 +67,7 @@ class SiftComparisonTest(Component):
 
             if len(descriptors1) < 2 or len(descriptors2) < 2:
                 self.output_detections = self._no_match_result()
-                return build_response_sift_comparison(context=self)
+                return build_response_sift_comparison_test(context=self)
 
             if self.matcher == "BFMatcher":
                 matcher = cv2.BFMatcher(cv2.NORM_L2)
@@ -115,7 +115,7 @@ class SiftComparisonTest(Component):
         except Exception:
             self.output_detections = self._no_match_result()
 
-        return build_response_sift_comparison(context=self)
+        return build_response_sift_comparison_test(context=self)
 
 
 if "__main__" == __name__:
