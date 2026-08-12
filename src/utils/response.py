@@ -1,15 +1,23 @@
-
 from sdks.novavision.src.helper.package import PackageHelper
-from components.Package.src.models.PackageModel import PackageModel, PackageConfigs, ConfigExecutor, PackageOutputs, PackageResponse, PackageExecutor, OutputImage
+from components.SIFTComparison.src.models.PackageModel import (
+    PackageModel,
+    PackageConfigs,
+    ConfigExecutor,
+    SIFTComparison,
+    SIFTComparisonResponse,
+    SIFTComparisonOutputs,
+    OutputDetections,
+)
 
 
-def build_response(context):
-    outputImage = OutputImage(value=context.image)
-    Outputs = PackageOutputs(outputImage=outputImage)
-    packageResponse = PackageResponse(outputs=Outputs)
-    packageExecutor = PackageExecutor(value=packageResponse)
-    executor = ConfigExecutor(value=packageExecutor)
-    packageConfigs = PackageConfigs(executor=executor)
+def build_response_sift_comparison(context):
+    output_detections = OutputDetections(value=context.output_detections)
+    outputs = SIFTComparisonOutputs(
+        OutputDetections=output_detections,
+    )
+    response = SIFTComparisonResponse(outputs=outputs)
+    executor = SIFTComparison(value=response)
+    configExecutor = ConfigExecutor(value=executor)
+    packageConfigs = PackageConfigs(executor=configExecutor)
     package = PackageHelper(packageModel=PackageModel, packageConfigs=packageConfigs)
-    packageModel = package.build_model(context)
-    return packageModel
+    return package.build_model(context)
