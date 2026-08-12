@@ -1,54 +1,99 @@
-
 from pydantic import Field, validator
-from typing import List, Optional, Union, Literal
+from typing import List, Union, Literal, Optional, Any
 from sdks.novavision.src.base.model import Package, Image, Inputs, Configs, Outputs, Response, Request, Output, Input, Config
 
 
-class InputImage(Input):
-    name: Literal["inputImage"] = "inputImage"
-    value: Union[List[Image], Image]
-    type: str = "object"
+# ============ GİRDİLER (INPUTS) — Her iki executor için ortak ============
 
-    @validator("type", pre=True, always=True)
-    def set_type_based_on_value(cls, value, values):
-        value = values.get('value')
-        if isinstance(value, Image):
-            return "object"
-        elif isinstance(value, list):
-            return "list"
+class InputSIFTOutputOne(Input):
+    name: Literal["inputSIFTOutputOne"] = "inputSIFTOutputOne"
+    value: Optional[Any]
+    type: Literal["object"] = "object"
 
     class Config:
-        title = "Image"
+        title = "SIFT Output 1"
 
 
-class OutputImage(Output):
-    name: Literal["outputImage"] = "outputImage"
-    value: Union[List[Image],Image]
-    type: str = "object"
-
-    @validator("type", pre=True, always=True)
-    def set_type_based_on_value(cls, value, values):
-        value = values.get('value')
-        if isinstance(value, Image):
-            return "object"
-        elif isinstance(value, list):
-            return "list"
+class InputSIFTOutputTwo(Input):
+    name: Literal["inputSIFTOutputTwo"] = "inputSIFTOutputTwo"
+    value: Optional[Any]
+    type: Literal["object"] = "object"
 
     class Config:
-        title = "Image"
+        title = "SIFT Output 2"
 
 
-class KeepSideFalse(Config):
-    name: Literal["False"] = "False"
-    value: Literal[False] = False
-    type: Literal["bool"] = "bool"
+# ============ ÇIKTI (OUTPUT) — Her iki executor için ortak ============
+
+class OutputDetections(Output):
+    name: Literal["outputDetections"] = "outputDetections"
+    value: Optional[Any]
+    type: Literal["list"] = "list"
+
+    class Config:
+        title = "Output Detections"
+
+
+# ============ ORTAK CONFIG ALANLARI ============
+
+class GoodMatchesThresholdField(Config):
+    name: Literal["goodMatchesThresholdField"] = "goodMatchesThresholdField"
+    value: int = Field(default=50)
+    type: Literal["number"] = "number"
+    field: Literal["textInput"] = "textInput"
+
+    class Config:
+        title = "Good Matches Threshold"
+
+
+class RatioThresholdField(Config):
+    name: Literal["ratioThresholdField"] = "ratioThresholdField"
+    value: float = Field(default=0.7)
+    type: Literal["number"] = "number"
+    field: Literal["textInput"] = "textInput"
+
+    class Config:
+        title = "Ratio Threshold"
+
+
+# ============ ADVANCED'A ÖZEL CONFIG ALANLARI ============
+
+class MatcherFlann(Config):
+    name: Literal["FlannBasedMatcher"] = "FlannBasedMatcher"
+    value: Literal["FlannBasedMatcher"] = "FlannBasedMatcher"
+    type: Literal["string"] = "string"
     field: Literal["option"] = "option"
 
     class Config:
-        title = "Disable"
+        title = "FLANN Based Matcher"
 
 
-class KeepSideTrue(Config):
+class MatcherBF(Config):
+    name: Literal["BFMatcher"] = "BFMatcher"
+    value: Literal["BFMatcher"] = "BFMatcher"
+    type: Literal["string"] = "string"
+    field: Literal["option"] = "option"
+
+    class Config:
+        title = "Brute Force Matcher"
+
+
+class MatcherField(Config):
+    name: Literal["matcherField"] = "matcherField"
+    value: Union[MatcherFlann, MatcherBF]
+    type: Literal["object"] = "object"
+    field: Literal["dropdownlist"] = "dropdownlist"
+
+    class Config:
+        title = "Matcher Algorithm"
+        json_schema_extra = {
+            "target": {
+                "value": 0
+            }
+        }
+
+
+class VisualizeOptionTrue(Config):
     name: Literal["True"] = "True"
     value: Literal[True] = True
     type: Literal["bool"] = "bool"
@@ -58,49 +103,62 @@ class KeepSideTrue(Config):
         title = "Enable"
 
 
-class KeepSideBBox(Config):
-    """
-        Rotate image without catting off sides.
-    """
-    name: Literal["KeepSide"] = "KeepSide"
-    value: Union[KeepSideTrue, KeepSideFalse]
+class VisualizeOptionFalse(Config):
+    name: Literal["False"] = "False"
+    value: Literal[False] = False
+    type: Literal["bool"] = "bool"
+    field: Literal["option"] = "option"
+
+    class Config:
+        title = "Disable"
+
+
+class VisualizeField(Config):
+    name: Literal["visualizeField"] = "visualizeField"
+    value: Union[VisualizeOptionTrue, VisualizeOptionFalse]
     type: Literal["object"] = "object"
     field: Literal["dropdownlist"] = "dropdownlist"
 
     class Config:
-        title = "Keep Sides"
+        title = "Visualize"
+        json_schema_extra = {
+            "target": {
+                "value": 0
+            }
+        }
 
 
-class Degree(Config):
-    """
-        Positive angles specify counterclockwise rotation while negative angles indicate clockwise rotation.
-    """
-    name: Literal["Degree"] = "Degree"
-    value: int = Field(ge=-359.0, le=359.0,default=0)
-    type: Literal["number"] = "number"
-    field: Literal["textInput"] = "textInput"
-    placeHolder: Literal["[-359, 359]"] = "[-359, 359]"
+# ============ INPUTS (EXECUTOR BAZINDA) ============
 
-    class Config:
-        title = "Angle"
+class BasicExecutorInputs(Inputs):
+    inputSIFTOutputOne: InputSIFTOutputOne
+    inputSIFTOutputTwo: InputSIFTOutputTwo
 
 
-class PackageInputs(Inputs):
-    inputImage: InputImage
+class AdvancedExecutorInputs(Inputs):
+    inputSIFTOutputOne: InputSIFTOutputOne
+    inputSIFTOutputTwo: InputSIFTOutputTwo
 
 
-class PackageConfigs(Configs):
-    degree: Degree
-    drawBBox: KeepSideBBox
+# ============ CONFIGS (EXECUTOR BAZINDA) ============
+
+class BasicExecutorConfigs(Configs):
+    goodMatchesThresholdField: GoodMatchesThresholdField
+    ratioThresholdField: RatioThresholdField
 
 
-class PackageOutputs(Outputs):
-    outputImage: OutputImage
+class AdvancedExecutorConfigs(Configs):
+    goodMatchesThresholdField: GoodMatchesThresholdField
+    ratioThresholdField: RatioThresholdField
+    matcherField: MatcherField
+    visualizeField: VisualizeField
 
 
-class PackageRequest(Request):
-    inputs: Optional[PackageInputs]
-    configs: PackageConfigs
+# ============ REQUEST (EXECUTOR BAZINDA) ============
+
+class BasicExecutorRequest(Request):
+    inputs: Optional[BasicExecutorInputs]
+    configs: BasicExecutorConfigs
 
     class Config:
         json_schema_extra = {
@@ -108,18 +166,61 @@ class PackageRequest(Request):
         }
 
 
-class PackageResponse(Response):
-    outputs: PackageOutputs
+class AdvancedExecutorRequest(Request):
+    inputs: Optional[AdvancedExecutorInputs]
+    configs: AdvancedExecutorConfigs
+
+    class Config:
+        json_schema_extra = {
+            "target": "configs"
+        }
 
 
-class PackageExecutor(Config):
-    name: Literal["Package"] = "Package"
-    value: Union[PackageRequest, PackageResponse]
+# ============ OUTPUTS (EXECUTOR BAZINDA) ============
+
+class BasicExecutorOutputs(Outputs):
+    outputDetections: OutputDetections
+
+
+class AdvancedExecutorOutputs(Outputs):
+    outputDetections: OutputDetections
+
+
+# ============ RESPONSE (EXECUTOR BAZINDA) ============
+
+class BasicExecutorResponse(Response):
+    outputs: BasicExecutorOutputs
+
+
+class AdvancedExecutorResponse(Response):
+    outputs: AdvancedExecutorOutputs
+
+
+# ============ EXECUTOR TANIMLARI ============
+
+class SIFTComparisonBasic(Config):
+    name: Literal["SIFTComparisonBasic"] = "SIFTComparisonBasic"
+    value: Union[BasicExecutorRequest, BasicExecutorResponse]
     type: Literal["object"] = "object"
     field: Literal["option"] = "option"
 
     class Config:
-        title = "Package"
+        title = "SIFT Comparison (Basic)"
+        json_schema_extra = {
+            "target": {
+                "value": 0
+            }
+        }
+
+
+class SIFTComparisonAdvanced(Config):
+    name: Literal["SIFTComparisonAdvanced"] = "SIFTComparisonAdvanced"
+    value: Union[AdvancedExecutorRequest, AdvancedExecutorResponse]
+    type: Literal["object"] = "object"
+    field: Literal["option"] = "option"
+
+    class Config:
+        title = "SIFT Comparison (Advanced)"
         json_schema_extra = {
             "target": {
                 "value": 0
@@ -129,15 +230,12 @@ class PackageExecutor(Config):
 
 class ConfigExecutor(Config):
     name: Literal["ConfigExecutor"] = "ConfigExecutor"
-    value: Union[PackageExecutor]
+    value: Union[SIFTComparisonBasic, SIFTComparisonAdvanced]
     type: Literal["executor"] = "executor"
     field: Literal["dependentDropdownlist"] = "dependentDropdownlist"
 
     class Config:
         title = "Task"
-        json_schema_extra = {
-            "target": "value"
-        }
 
 
 class PackageConfigs(Configs):
