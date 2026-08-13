@@ -4,15 +4,28 @@ import json
 import cv2
 import numpy as np
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '../../../../'))
+sys.path.append(
+    os.path.join(
+        os.path.dirname(__file__),
+        '../../../../'
+    )
+)
 
 from sdks.novavision.src.base.component import Component
-from sdks.novavision.src.base.model import KeyPoints, Detection, Connection
+from sdks.novavision.src.base.model import (
+    KeyPoints,
+    Detection,
+    Connection
+)
 from sdks.novavision.src.helper.executor import Executor
+
 from components.SiftComparisonTest.src.utils.response import (
     build_response_sift_comparison_test
 )
-from components.SiftComparisonTest.src.models.PackageModel import PackageModel
+
+from components.SiftComparisonTest.src.models.PackageModel import (
+    PackageModel
+)
 
 
 class SiftComparisonTest(Component):
@@ -20,69 +33,113 @@ class SiftComparisonTest(Component):
     def __init__(self, request, bootstrap):
         super().__init__(request, bootstrap)
 
-        self.request.model = PackageModel(**self.request.data)
+        self.request.model = PackageModel(
+            **self.request.data
+        )
 
-        self.good_matches_threshold = self.request.get_param(
-            "GoodMatchesThreshold"
+        self.good_matches_threshold = (
+            self.request.get_param(
+                "GoodMatchesThreshold"
+            )
         )
-        self.ratio_threshold = self.request.get_param(
-            "RatioThreshold"
+
+        self.ratio_threshold = (
+            self.request.get_param(
+                "RatioThreshold"
+            )
         )
-        self.matcher = self.request.get_param(
-            "Matcher"
+
+        self.matcher = (
+            self.request.get_param(
+                "Matcher"
+            )
         )
-        self.sift_output_1 = self.request.get_param(
-            "InputSIFTOutput1"
+
+        self.sift_output_1 = (
+            self.request.get_param(
+                "InputSIFTOutput1"
+            )
         )
-        self.sift_output_2 = self.request.get_param(
-            "InputSIFTOutput2"
+
+        self.sift_output_2 = (
+            self.request.get_param(
+                "InputSIFTOutput2"
+            )
         )
 
     @staticmethod
     def bootstrap(config: dict) -> dict:
         return {}
 
-    def _extract_keypoints_and_descriptors(self, sift_output):
-
-        if isinstance(sift_output, str):
-            sift_output = json.loads(sift_output)
+    def _extract_keypoints_and_descriptors(
+        self,
+        sift_output
+    ):
 
         keypoints_dicts = []
         descriptors = []
 
-        if not isinstance(sift_output, list):
+        # ---------------------------------------------
+        # Convert JSON string if necessary
+        # ---------------------------------------------
+
+        if isinstance(sift_output, str):
+            sift_output = json.loads(
+                sift_output
+            )
+
+        if not isinstance(
+            sift_output,
+            list
+        ):
             raise ValueError(
                 "SIFT output must be a list."
             )
 
+        # ---------------------------------------------
+        # Extract keypoints and descriptors
+        # ---------------------------------------------
+
         for detection in sift_output:
 
-            keypoints = detection.get("keyPoints", [])
+            keypoints = detection.get(
+                "keyPoints",
+                []
+            )
 
             for kp in keypoints:
 
                 if "descriptor" not in kp:
                     raise ValueError(
-                        "SIFT keypoint does not contain 'descriptor'."
+                        "SIFT keypoint does not contain "
+                        "'descriptor'."
                     )
 
-                keypoints_dicts.append({
-                    "pt": (
-                        float(kp["cx"]),
-                        float(kp["cy"])
-                    ),
-                    "size": float(kp.get("size", 1.0)),
-                    "angle": float(kp.get("angle", -1.0)),
-                    "response": float(kp.get("response", 0.0)),
-                    "octave": int(kp.get("octave", 0))
-                })
+                keypoints_dicts.append(
+                    {
+                        "pt": (
+                            float(kp["cx"]),
+                            float(kp["cy"])
+                        )
+                    }
+                )
 
-                descriptors.append(kp["descriptor"])
+                descriptors.append(
+                    kp["descriptor"]
+                )
+
+        # ---------------------------------------------
+        # Empty descriptor check
+        # ---------------------------------------------
 
         if not descriptors:
-            return keypoints_dicts, np.empty(
-                (0, 128),
-                dtype=np.float32
+
+            return (
+                keypoints_dicts,
+                np.empty(
+                    (0, 128),
+                    dtype=np.float32
+                )
             )
 
         descriptors = np.asarray(
@@ -90,7 +147,10 @@ class SiftComparisonTest(Component):
             dtype=np.float32
         )
 
-        return keypoints_dicts, descriptors
+        return (
+            keypoints_dicts,
+            descriptors
+        )
 
     def _no_match_result(self):
 
@@ -110,21 +170,35 @@ class SiftComparisonTest(Component):
 
         try:
 
-            # -------------------------------------------------
-            # Extract SIFT outputs
-            # -------------------------------------------------
+            # =============================================
+            # STEP 1 - Extract SIFT outputs
+            # =============================================
 
-            keypoints1_dicts, descriptors1 = (
-                self._extract_keypoints_and_descriptors(
-                    self.sift_output_1
-                )
+            print(
+                "SIFT Comparison: extracting input 1"
             )
 
-            keypoints2_dicts, descriptors2 = (
-                self._extract_keypoints_and_descriptors(
-                    self.sift_output_2
-                )
+            (
+                keypoints1_dicts,
+                descriptors1
+            ) = self._extract_keypoints_and_descriptors(
+                self.sift_output_1
             )
+
+            print(
+                "SIFT Comparison: extracting input 2"
+            )
+
+            (
+                keypoints2_dicts,
+                descriptors2
+            ) = self._extract_keypoints_and_descriptors(
+                self.sift_output_2
+            )
+
+            # =============================================
+            # STEP 2 - Print descriptor information
+            # =============================================
 
             print(
                 "Descriptor 1 shape:",
@@ -137,29 +211,60 @@ class SiftComparisonTest(Component):
             )
 
             print(
+                "Keypoints 1:",
+                len(keypoints1_dicts)
+            )
+
+            print(
+                "Keypoints 2:",
+                len(keypoints2_dicts)
+            )
+
+            print(
                 "Matcher:",
                 self.matcher
             )
 
-            # -------------------------------------------------
-            # Check descriptor count
-            # -------------------------------------------------
+            print(
+                "Ratio threshold:",
+                self.ratio_threshold
+            )
+
+            print(
+                "Good matches threshold:",
+                self.good_matches_threshold
+            )
+
+            # =============================================
+            # STEP 3 - Check descriptor count
+            # =============================================
 
             if (
                 len(descriptors1) < 2
                 or len(descriptors2) < 2
             ):
+
+                print(
+                    "Not enough descriptors."
+                )
+
                 self.output_detections = (
                     self._no_match_result()
                 )
 
-                return build_response_sift_comparison_test(
-                    context=self
+                return (
+                    build_response_sift_comparison_test(
+                        context=self
+                    )
                 )
 
-            # -------------------------------------------------
-            # Create matcher
-            # -------------------------------------------------
+            # =============================================
+            # STEP 4 - Create matcher
+            # =============================================
+
+            print(
+                "Creating matcher..."
+            )
 
             if self.matcher == "BFMatcher":
 
@@ -184,11 +289,17 @@ class SiftComparisonTest(Component):
                     search_params
                 )
 
-            # -------------------------------------------------
-            # KNN matching
-            # -------------------------------------------------
+            print(
+                "Matcher created."
+            )
 
-            print("Starting KNN matching...")
+            # =============================================
+            # STEP 5 - KNN matching
+            # =============================================
+
+            print(
+                "MATCHING STARTED"
+            )
 
             matches = matcher.knnMatch(
                 descriptors1,
@@ -197,13 +308,21 @@ class SiftComparisonTest(Component):
             )
 
             print(
-                "Matches calculated:",
+                "MATCHING FINISHED"
+            )
+
+            print(
+                "Total match groups:",
                 len(matches)
             )
 
-            # -------------------------------------------------
-            # Lowe's Ratio Test
-            # -------------------------------------------------
+            # =============================================
+            # STEP 6 - Lowe Ratio Test
+            # =============================================
+
+            print(
+                "Ratio test started."
+            )
 
             good_matches = []
 
@@ -214,14 +333,19 @@ class SiftComparisonTest(Component):
 
                 m, n = match_pair
 
-                if m.distance < (
-                    self.ratio_threshold * n.distance
+                if (
+                    m.distance
+                    < self.ratio_threshold * n.distance
                 ):
                     good_matches.append(m)
 
-            # -------------------------------------------------
-            # Match result
-            # -------------------------------------------------
+            print(
+                "Ratio test finished."
+            )
+
+            # =============================================
+            # STEP 7 - Calculate result
+            # =============================================
 
             good_matches_count = len(
                 good_matches
@@ -238,13 +362,13 @@ class SiftComparisonTest(Component):
             )
 
             print(
-                "Match result:",
+                "Images match:",
                 images_match
             )
 
-            # -------------------------------------------------
-            # Combine keypoints
-            # -------------------------------------------------
+            # =============================================
+            # STEP 8 - Combine keypoints
+            # =============================================
 
             all_keypoints_dicts = (
                 keypoints1_dicts
@@ -257,16 +381,20 @@ class SiftComparisonTest(Component):
 
             keypoints = [
                 KeyPoints(
-                    cx=float(kp["pt"][0]),
-                    cy=float(kp["pt"][1]),
+                    cx=float(
+                        kp["pt"][0]
+                    ),
+                    cy=float(
+                        kp["pt"][1]
+                    ),
                     confidence=1.0
                 )
                 for kp in all_keypoints_dicts
             ]
 
-            # -------------------------------------------------
-            # Create connections
-            # -------------------------------------------------
+            # =============================================
+            # STEP 9 - Create connections
+            # =============================================
 
             connections = [
                 Connection(
@@ -276,9 +404,14 @@ class SiftComparisonTest(Component):
                 for m in good_matches
             ]
 
-            # -------------------------------------------------
-            # Output
-            # -------------------------------------------------
+            print(
+                "Connections:",
+                len(connections)
+            )
+
+            # =============================================
+            # STEP 10 - Create output
+            # =============================================
 
             self.output_detections = [
                 Detection(
@@ -289,7 +422,9 @@ class SiftComparisonTest(Component):
                         good_matches_count
                     ),
                     classId=(
-                        1 if images_match else 0
+                        1
+                        if images_match
+                        else 0
                     ),
                     classLabel=(
                         "Match"
@@ -300,20 +435,38 @@ class SiftComparisonTest(Component):
                 )
             ]
 
+            print(
+                "SIFT Comparison completed."
+            )
+
         except Exception as e:
 
             print(
-                "SIFT Comparison Error:",
+                "================================="
+            )
+
+            print(
+                "SIFT COMPARISON ERROR:"
+            )
+
+            print(
                 repr(e)
             )
 
-            # Hatanın gerçek traceback'ini görmek için
+            print(
+                "================================="
+            )
+
             raise
 
-        return build_response_sift_comparison_test(
-            context=self
+        return (
+            build_response_sift_comparison_test(
+                context=self
+            )
         )
 
 
 if __name__ == "__main__":
-    Executor(sys.argv[1]).run()
+    Executor(
+        sys.argv[1]
+    ).run()
