@@ -1,9 +1,7 @@
-from pydantic import validator
-from typing import List, Optional, Union, Literal, Any
+from typing import Optional, Union, Literal, Any
 
 from sdks.novavision.src.base.model import (
     Package,
-    Image,
     Inputs,
     Outputs,
     Configs,
@@ -56,13 +54,8 @@ class OutputDetections(Output):
 
 class GoodMatchesThreshold(Config):
     """
-    Minimum number of good feature matches required to
-    consider the two images as matching.
-
-    Lower values are more lenient.
-    Higher values are stricter.
-
-    Default: 50
+    Minimum number of good matches required
+    to classify two images as Match.
     """
 
     name: Literal["GoodMatchesThreshold"] = "GoodMatchesThreshold"
@@ -73,18 +66,19 @@ class GoodMatchesThreshold(Config):
     class Config:
         title = "Good Matches Threshold"
         json_schema_extra = {
-            "shortDescription": "Min matches to consider a match"
+            "shortDescription": "Minimum good matches required"
         }
 
 
 class RatioThreshold(Config):
     """
-    Threshold used by Lowe's ratio test.
+    Lowe's Ratio Test threshold.
 
-    Lower values are stricter.
-    Higher values are more lenient.
+    Lower value:
+        More strict matching.
 
-    Default: 0.7
+    Higher value:
+        More tolerant matching.
     """
 
     name: Literal["RatioThreshold"] = "RatioThreshold"
@@ -95,14 +89,17 @@ class RatioThreshold(Config):
     class Config:
         title = "Ratio Threshold"
         json_schema_extra = {
-            "shortDescription": "Lowe's ratio test (0.0-1.0)"
+            "shortDescription": "Lowe's ratio test threshold"
         }
 
 
+# ============================================================
+# MATCHER OPTIONS
+# ============================================================
+
 class MatcherFlann(Config):
     """
-    FLANN performs efficient approximate nearest-neighbor
-    search for SIFT descriptors.
+    FLANN matcher for SIFT descriptors.
     """
 
     name: Literal["FlannBasedMatcher"] = "FlannBasedMatcher"
@@ -113,14 +110,13 @@ class MatcherFlann(Config):
     class Config:
         title = "FLANN Based Matcher"
         json_schema_extra = {
-            "shortDescription": "Approximate nearest-neighbor matching"
+            "shortDescription": "FLANN nearest-neighbor matching"
         }
 
 
 class MatcherBF(Config):
     """
-    BFMatcher performs brute-force nearest-neighbor matching
-    using the L2 distance for SIFT descriptors.
+    Brute Force matcher for SIFT descriptors.
     """
 
     name: Literal["BFMatcher"] = "BFMatcher"
@@ -131,33 +127,39 @@ class MatcherBF(Config):
     class Config:
         title = "Brute Force Matcher"
         json_schema_extra = {
-            "shortDescription": "Brute-force exact matching"
+            "shortDescription": "Brute-force descriptor matching"
         }
 
 
 class Matcher(Config):
     """
-    Selects the matcher algorithm used to compare
-    SIFT descriptors.
+    Select the descriptor matching algorithm.
 
-    FlannBasedMatcher:
-        Approximate nearest-neighbor search.
-
-    BFMatcher:
-        Brute-force nearest-neighbor search.
+    Options:
+        - FlannBasedMatcher
+        - BFMatcher
     """
 
     name: Literal["Matcher"] = "Matcher"
-    value: Union[MatcherFlann, MatcherBF]
+
+    value: Union[
+        MatcherFlann,
+        MatcherBF
+    ]
+
     type: Literal["object"] = "object"
     field: Literal["dropdownlist"] = "dropdownlist"
 
     class Config:
         title = "Matcher Algorithm"
         json_schema_extra = {
-            "shortDescription": "FLANN or Brute Force"
+            "shortDescription": "Select FLANN or Brute Force"
         }
 
+
+# ============================================================
+# CONFIG MODEL
+# ============================================================
 
 class SiftComparisonTestConfigs(Configs):
     GoodMatchesThreshold: GoodMatchesThreshold
@@ -178,6 +180,10 @@ class SiftComparisonTestOutputs(Outputs):
     OutputDetections: OutputDetections
 
 
+# ============================================================
+# REQUEST
+# ============================================================
+
 class SiftComparisonTestRequest(Request):
     inputs: Optional[SiftComparisonTestInputs]
     configs: SiftComparisonTestConfigs
@@ -187,6 +193,10 @@ class SiftComparisonTestRequest(Request):
             "target": "configs"
         }
 
+
+# ============================================================
+# RESPONSE
+# ============================================================
 
 class SiftComparisonTestResponse(Response):
     outputs: SiftComparisonTestOutputs
@@ -198,31 +208,28 @@ class SiftComparisonTestResponse(Response):
 
 class SiftComparisonTest(Config):
     """
-    Compares two images using SIFT descriptors received
-    from external SIFT blocks.
+    Compares two images using SIFT descriptors
+    received from external SIFT blocks.
 
-    The package does not calculate SIFT features itself.
-    It only performs descriptor matching.
-
-    Output:
-        - Keypoints
-        - Connections
-        - Good match count as confidence
-        - Match / NoMatch classification
+    The package itself does not calculate SIFT features.
     """
 
     name: Literal["SiftComparisonTest"] = "SiftComparisonTest"
+
     value: Union[
         SiftComparisonTestRequest,
         SiftComparisonTestResponse
     ]
+
     type: Literal["object"] = "object"
     field: Literal["option"] = "option"
 
     class Config:
         title = "SIFT Comparison"
         json_schema_extra = {
-            "target": {"value": 0},
+            "target": {
+                "value": 0
+            },
             "shortDescription": "Feature-based image matching"
         }
 
@@ -231,12 +238,14 @@ class ConfigExecutor(Config):
     """
     SIFT Comparison executor.
 
-    Compares SIFT descriptors using either FLANN
-    or Brute Force matching.
+    Compares SIFT descriptors using either
+    FLANN or Brute Force matching.
     """
 
     name: Literal["ConfigExecutor"] = "ConfigExecutor"
+
     value: Union[SiftComparisonTest]
+
     type: Literal["executor"] = "executor"
     field: Literal["dependentDropdownlist"] = "dependentDropdownlist"
 
@@ -246,6 +255,10 @@ class ConfigExecutor(Config):
             "target": "value"
         }
 
+
+# ============================================================
+# PACKAGE CONFIG
+# ============================================================
 
 class PackageConfigs(Configs):
     executor: ConfigExecutor

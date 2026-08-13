@@ -1,4 +1,5 @@
 from sdks.novavision.src.helper.package import PackageHelper
+
 from components.SiftComparisonTest.src.models.PackageModel import (
     PackageModel,
     PackageConfigs,
@@ -11,13 +12,44 @@ from components.SiftComparisonTest.src.models.PackageModel import (
 
 
 def build_response_sift_comparison_test(context):
-    output_detections = OutputDetections(value=context.output_detections)
-    outputs = SiftComparisonTestOutputs(
-        OutputDetections=output_detections,
+
+    # Executor tarafından oluşturulan
+    # Detection listesini OutputDetections
+    # modeline koyuyoruz.
+    output_detections = OutputDetections(
+        value=context.output_detections
     )
-    response = SiftComparisonTestResponse(outputs=outputs)
-    executor = SiftComparisonTest(value=response)
-    configExecutor = ConfigExecutor(value=executor)
-    packageConfigs = PackageConfigs(executor=configExecutor)
-    package = PackageHelper(packageModel=PackageModel, packageConfigs=packageConfigs)
+
+    # Outputs modelini oluşturuyoruz.
+    outputs = SiftComparisonTestOutputs(
+        OutputDetections=output_detections
+    )
+
+    # Response modelini oluşturuyoruz.
+    response = SiftComparisonTestResponse(
+        outputs=outputs
+    )
+
+    # Executor response'unu oluşturuyoruz.
+    executor = SiftComparisonTest(
+        value=response
+    )
+
+    # ConfigExecutor oluşturuluyor.
+    configExecutor = ConfigExecutor(
+        value=executor
+    )
+
+    # Package config oluşturuluyor.
+    packageConfigs = PackageConfigs(
+        executor=configExecutor
+    )
+
+    # PackageHelper ile Novavision package response'u
+    # oluşturuluyor.
+    package = PackageHelper(
+        packageModel=PackageModel,
+        packageConfigs=packageConfigs
+    )
+
     return package.build_model(context)
