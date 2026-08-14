@@ -1,10 +1,12 @@
-from typing import Optional, Union, Literal, Any
+from pydantic import validator
+from typing import Optional, Union, Literal, Any, List
 
 from sdks.novavision.src.base.model import (
     Package,
+    Image,
     Inputs,
-    Outputs,
     Configs,
+    Outputs,
     Response,
     Request,
     Output,
@@ -19,8 +21,19 @@ from sdks.novavision.src.base.model import (
 
 class InputImageOne(Input):
     name: Literal["InputImageOne"] = "InputImageOne"
-    value: Any
-    type: Literal["object"] = "object"
+    value: Union[List[Image], Image]
+    type: str = "object"
+
+    @validator("type", pre=True, always=True)
+    def set_type_based_on_value(cls, value, values):
+        value = values.get("value")
+
+        if isinstance(value, Image):
+            return "object"
+        elif isinstance(value, list):
+            return "list"
+
+        return "object"
 
     class Config:
         title = "Image Input 1"
@@ -28,8 +41,19 @@ class InputImageOne(Input):
 
 class InputImageTwo(Input):
     name: Literal["InputImageTwo"] = "InputImageTwo"
-    value: Any
-    type: Literal["object"] = "object"
+    value: Union[List[Image], Image]
+    type: str = "object"
+
+    @validator("type", pre=True, always=True)
+    def set_type_based_on_value(cls, value, values):
+        value = values.get("value")
+
+        if isinstance(value, Image):
+            return "object"
+        elif isinstance(value, list):
+            return "list"
+
+        return "object"
 
     class Config:
         title = "Image Input 2"
@@ -54,7 +78,7 @@ class InputSIFTOutput2(Input):
 
 
 # ============================================================
-# OUTPUTS
+# OUTPUT
 # ============================================================
 
 class OutputDetections(Output):
@@ -78,9 +102,6 @@ class GoodMatchesThreshold(Config):
 
     class Config:
         title = "Good Matches Threshold"
-        json_schema_extra = {
-            "shortDescription": "Minimum good matches required"
-        }
 
 
 class RatioThreshold(Config):
@@ -91,13 +112,10 @@ class RatioThreshold(Config):
 
     class Config:
         title = "Ratio Threshold"
-        json_schema_extra = {
-            "shortDescription": "Lowe's ratio test threshold"
-        }
 
 
 # ============================================================
-# MATCHER OPTIONS
+# MATCHER
 # ============================================================
 
 class MatcherFlann(Config):
@@ -108,9 +126,6 @@ class MatcherFlann(Config):
 
     class Config:
         title = "FLANN Based Matcher"
-        json_schema_extra = {
-            "shortDescription": "FLANN nearest-neighbor matching"
-        }
 
 
 class MatcherBF(Config):
@@ -121,27 +136,16 @@ class MatcherBF(Config):
 
     class Config:
         title = "Brute Force Matcher"
-        json_schema_extra = {
-            "shortDescription": "Brute-force descriptor matching"
-        }
 
 
 class Matcher(Config):
     name: Literal["Matcher"] = "Matcher"
-
-    value: Union[
-        MatcherFlann,
-        MatcherBF
-    ]
-
+    value: Union[MatcherFlann, MatcherBF]
     type: Literal["object"] = "object"
     field: Literal["dropdownlist"] = "dropdownlist"
 
     class Config:
         title = "Matcher Algorithm"
-        json_schema_extra = {
-            "shortDescription": "Select FLANN or Brute Force"
-        }
 
 
 # ============================================================
@@ -153,10 +157,6 @@ class SiftComparisonTestConfigs(Configs):
     RatioThreshold: RatioThreshold
     Matcher: Matcher
 
-
-# ============================================================
-# INPUT / OUTPUT MODELS
-# ============================================================
 
 class SiftComparisonTestInputs(Inputs):
     InputImageOne: InputImageOne
@@ -170,7 +170,7 @@ class SiftComparisonTestOutputs(Outputs):
 
 
 # ============================================================
-# REQUEST
+# REQUEST / RESPONSE
 # ============================================================
 
 class SiftComparisonTestRequest(Request):
@@ -183,16 +183,12 @@ class SiftComparisonTestRequest(Request):
         }
 
 
-# ============================================================
-# RESPONSE
-# ============================================================
-
 class SiftComparisonTestResponse(Response):
     outputs: SiftComparisonTestOutputs
 
 
 # ============================================================
-# EXECUTOR CONFIGURATION
+# EXECUTOR CONFIG
 # ============================================================
 
 class SiftComparisonTest(Config):
@@ -208,12 +204,6 @@ class SiftComparisonTest(Config):
 
     class Config:
         title = "SIFT Comparison"
-        json_schema_extra = {
-            "target": {
-                "value": 0
-            },
-            "shortDescription": "Feature-based image matching"
-        }
 
 
 class ConfigExecutor(Config):
@@ -226,22 +216,11 @@ class ConfigExecutor(Config):
 
     class Config:
         title = "Task"
-        json_schema_extra = {
-            "target": "value"
-        }
 
-
-# ============================================================
-# PACKAGE CONFIG
-# ============================================================
 
 class PackageConfigs(Configs):
     executor: ConfigExecutor
 
-
-# ============================================================
-# PACKAGE MODEL
-# ============================================================
 
 class PackageModel(Package):
     name: Literal["SiftComparisonTest"] = "SiftComparisonTest"
