@@ -1,9 +1,7 @@
-from pydantic import validator
-from typing import List, Union, Literal, Optional, Any
+from typing import Optional, Union, Literal, Any
 
 from sdks.novavision.src.base.model import (
     Package,
-    Image,
     Inputs,
     Outputs,
     Configs,
@@ -37,46 +35,6 @@ class InputSIFTOutput2(Input):
         title = "SIFT Output 2"
 
 
-class InputImage1(Input):
-    name: Literal["InputImage1"] = "InputImage1"
-    value: Union[List[Image], Image]
-    type: str = "object"
-
-    @validator("type", pre=True, always=True)
-    def set_type_based_on_value(cls, value, values):
-        value = values.get("value")
-
-        if isinstance(value, Image):
-            return "object"
-        elif isinstance(value, list):
-            return "list"
-
-        return "object"
-
-    class Config:
-        title = "Image 1"
-
-
-class InputImage2(Input):
-    name: Literal["InputImage2"] = "InputImage2"
-    value: Union[List[Image], Image]
-    type: str = "object"
-
-    @validator("type", pre=True, always=True)
-    def set_type_based_on_value(cls, value, values):
-        value = values.get("value")
-
-        if isinstance(value, Image):
-            return "object"
-        elif isinstance(value, list):
-            return "list"
-
-        return "object"
-
-    class Config:
-        title = "Image 2"
-
-
 # ============================================================
 # OUTPUTS
 # ============================================================
@@ -92,19 +50,8 @@ class OutputDetections(Output):
 
 class OutputVisualization(Output):
     name: Literal["OutputVisualization"] = "OutputVisualization"
-    value: Union[List[Image], Image]
-    type: str = "object"
-
-    @validator("type", pre=True, always=True)
-    def set_type_based_on_value(cls, value, values):
-        value = values.get("value")
-
-        if isinstance(value, Image):
-            return "object"
-        elif isinstance(value, list):
-            return "list"
-
-        return "object"
+    value: Optional[Any]
+    type: Literal["object"] = "object"
 
     class Config:
         title = "Visualization"
@@ -142,14 +89,14 @@ class RatioThreshold(Config):
 
 class Visualize(Config):
     name: Literal["Visualize"] = "Visualize"
-    value: bool = False
+    value: bool = True
     type: Literal["bool"] = "bool"
     field: Literal["option"] = "option"
 
     class Config:
         title = "Visualize"
         json_schema_extra = {
-            "shortDescription": "Generate match visualization"
+            "shortDescription": "Generate SIFT keypoint visualization"
         }
 
 
@@ -165,9 +112,6 @@ class MatcherFlann(Config):
 
     class Config:
         title = "FLANN Based Matcher"
-        json_schema_extra = {
-            "shortDescription": "FLANN nearest-neighbor matching"
-        }
 
 
 class MatcherBF(Config):
@@ -178,9 +122,6 @@ class MatcherBF(Config):
 
     class Config:
         title = "Brute Force Matcher"
-        json_schema_extra = {
-            "shortDescription": "Brute-force descriptor matching"
-        }
 
 
 class Matcher(Config):
@@ -196,9 +137,6 @@ class Matcher(Config):
 
     class Config:
         title = "Matcher Algorithm"
-        json_schema_extra = {
-            "shortDescription": "Select FLANN or Brute Force"
-        }
 
 
 # ============================================================
@@ -219,8 +157,6 @@ class SiftComparisonTestConfigs(Configs):
 class SiftComparisonTestInputs(Inputs):
     InputSIFTOutput1: InputSIFTOutput1
     InputSIFTOutput2: InputSIFTOutput2
-    InputImage1: InputImage1
-    InputImage2: InputImage2
 
 
 # ============================================================
@@ -255,7 +191,7 @@ class SiftComparisonTestResponse(Response):
 
 
 # ============================================================
-# EXECUTOR CONFIGURATION
+# EXECUTOR
 # ============================================================
 
 class SiftComparisonTest(Config):

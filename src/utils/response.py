@@ -14,66 +14,34 @@ from components.SiftComparisonTest.src.models.PackageModel import (
 
 def build_response_sift_comparison_test(context):
 
-    # ============================================================
-    # DETECTION OUTPUT
-    # ============================================================
-
     outputDetections = OutputDetections(
         value=context.output_detections
     )
-
-    # ============================================================
-    # VISUALIZATION OUTPUT
-    # ============================================================
 
     outputVisualization = OutputVisualization(
         value=context.output_visualization
     )
 
-    # ============================================================
-    # OUTPUTS
-    # ============================================================
-
-    siftComparisonTestOutputs = SiftComparisonTestOutputs(
+    outputs = SiftComparisonTestOutputs(
         OutputDetections=outputDetections,
         OutputVisualization=outputVisualization
     )
 
-    # ============================================================
-    # RESPONSE
-    # ============================================================
-
-    siftComparisonTestResponse = SiftComparisonTestResponse(
-        outputs=siftComparisonTestOutputs
+    response = SiftComparisonTestResponse(
+        outputs=outputs
     )
 
-    # ============================================================
-    # EXECUTOR
-    # ============================================================
-
-    siftComparisonTest = SiftComparisonTest(
-        value=siftComparisonTestResponse
+    executor = SiftComparisonTest(
+        value=response
     )
-
-    # ============================================================
-    # CONFIG EXECUTOR
-    # ============================================================
 
     configExecutor = ConfigExecutor(
-        value=siftComparisonTest
+        value=executor
     )
-
-    # ============================================================
-    # PACKAGE CONFIG
-    # ============================================================
 
     packageConfigs = PackageConfigs(
         executor=configExecutor
     )
-
-    # ============================================================
-    # PACKAGE
-    # ============================================================
 
     package = PackageHelper(
         packageModel=PackageModel,
