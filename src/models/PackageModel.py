@@ -1,5 +1,5 @@
 from pydantic import validator
-from typing import Optional, Union, Literal, Any, List
+from typing import List, Union, Literal, Optional, Any
 
 from sdks.novavision.src.base.model import (
     Package,
@@ -16,7 +16,7 @@ from sdks.novavision.src.base.model import (
 
 
 # ============================================================
-# INPUTS
+# INPUT IMAGE 1
 # ============================================================
 
 class InputImageOne(Input):
@@ -39,6 +39,10 @@ class InputImageOne(Input):
         title = "Image Input 1"
 
 
+# ============================================================
+# INPUT IMAGE 2
+# ============================================================
+
 class InputImageTwo(Input):
     name: Literal["InputImageTwo"] = "InputImageTwo"
     value: Union[List[Image], Image]
@@ -58,6 +62,10 @@ class InputImageTwo(Input):
     class Config:
         title = "Image Input 2"
 
+
+# ============================================================
+# SIFT OUTPUT INPUTS
+# ============================================================
 
 class InputSIFTOutput1(Input):
     name: Literal["InputSIFTOutput1"] = "InputSIFTOutput1"
@@ -102,6 +110,9 @@ class GoodMatchesThreshold(Config):
 
     class Config:
         title = "Good Matches Threshold"
+        json_schema_extra = {
+            "shortDescription": "Minimum good matches required"
+        }
 
 
 class RatioThreshold(Config):
@@ -112,6 +123,9 @@ class RatioThreshold(Config):
 
     class Config:
         title = "Ratio Threshold"
+        json_schema_extra = {
+            "shortDescription": "Lowe's ratio test threshold"
+        }
 
 
 # ============================================================
@@ -126,6 +140,9 @@ class MatcherFlann(Config):
 
     class Config:
         title = "FLANN Based Matcher"
+        json_schema_extra = {
+            "shortDescription": "FLANN nearest-neighbor matching"
+        }
 
 
 class MatcherBF(Config):
@@ -136,16 +153,27 @@ class MatcherBF(Config):
 
     class Config:
         title = "Brute Force Matcher"
+        json_schema_extra = {
+            "shortDescription": "Brute-force descriptor matching"
+        }
 
 
 class Matcher(Config):
     name: Literal["Matcher"] = "Matcher"
-    value: Union[MatcherFlann, MatcherBF]
+
+    value: Union[
+        MatcherFlann,
+        MatcherBF
+    ]
+
     type: Literal["object"] = "object"
     field: Literal["dropdownlist"] = "dropdownlist"
 
     class Config:
         title = "Matcher Algorithm"
+        json_schema_extra = {
+            "shortDescription": "Select FLANN or Brute Force"
+        }
 
 
 # ============================================================
@@ -157,6 +185,10 @@ class SiftComparisonTestConfigs(Configs):
     RatioThreshold: RatioThreshold
     Matcher: Matcher
 
+
+# ============================================================
+# INPUT / OUTPUT MODELS
+# ============================================================
 
 class SiftComparisonTestInputs(Inputs):
     InputImageOne: InputImageOne
@@ -170,7 +202,7 @@ class SiftComparisonTestOutputs(Outputs):
 
 
 # ============================================================
-# REQUEST / RESPONSE
+# REQUEST
 # ============================================================
 
 class SiftComparisonTestRequest(Request):
@@ -182,6 +214,10 @@ class SiftComparisonTestRequest(Request):
             "target": "configs"
         }
 
+
+# ============================================================
+# RESPONSE
+# ============================================================
 
 class SiftComparisonTestResponse(Response):
     outputs: SiftComparisonTestOutputs
@@ -204,6 +240,12 @@ class SiftComparisonTest(Config):
 
     class Config:
         title = "SIFT Comparison"
+        json_schema_extra = {
+            "target": {
+                "value": 0
+            },
+            "shortDescription": "Feature-based image matching"
+        }
 
 
 class ConfigExecutor(Config):
@@ -216,11 +258,22 @@ class ConfigExecutor(Config):
 
     class Config:
         title = "Task"
+        json_schema_extra = {
+            "target": "value"
+        }
 
+
+# ============================================================
+# PACKAGE CONFIG
+# ============================================================
 
 class PackageConfigs(Configs):
     executor: ConfigExecutor
 
+
+# ============================================================
+# PACKAGE MODEL
+# ============================================================
 
 class PackageModel(Package):
     name: Literal["SiftComparisonTest"] = "SiftComparisonTest"
