@@ -14,38 +14,48 @@ from components.SiftComparison.src.models.PackageModel import (
 
 def build_response_sift_comparison(context):
 
-    output_detections = OutputDetections(
+    # Detection output
+    outputDetections = OutputDetections(
         value=context.output_detections
     )
 
-    output_visualization = OutputVisualization(
+    # Visualization output
+    outputVisualization = OutputVisualization(
         value=context.visualization_image
     )
 
-    outputs = SiftComparisonTestOutputs(
-        OutputDetections=output_detections,
-        OutputVisualization=output_visualization
+    # Outputs
+    siftComparisonOutputs = SiftComparisonTestOutputs(
+        OutputDetections=outputDetections,
+        OutputVisualization=outputVisualization
     )
 
-    response = SiftComparisonTestResponse(
-        outputs=outputs
+    # Response
+    siftComparisonResponse = SiftComparisonTestResponse(
+        outputs=siftComparisonOutputs
     )
 
-    executor = SiftComparisonTest(
-        value=response
+    # Executor
+    siftComparison = SiftComparisonTest(
+        value=siftComparisonResponse
     )
 
+    # ConfigExecutor
     configExecutor = ConfigExecutor(
-        value=executor
+        value=siftComparison
     )
 
+    # Package config
     packageConfigs = PackageConfigs(
         executor=configExecutor
     )
 
+    # Package
     package = PackageHelper(
         packageModel=PackageModel,
         packageConfigs=packageConfigs
     )
 
-    return package.build_model(context)
+    packageModel = package.build_model(context)
+
+    return packageModel
