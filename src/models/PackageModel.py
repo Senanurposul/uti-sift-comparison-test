@@ -1,12 +1,10 @@
-from pydantic import Field, validator
-from typing import List, Union, Literal, Optional, Any
+from typing import Optional, Union, Literal, Any
 
 from sdks.novavision.src.base.model import (
     Package,
-    Image,
     Inputs,
-    Configs,
     Outputs,
+    Configs,
     Response,
     Request,
     Output,
@@ -21,19 +19,8 @@ from sdks.novavision.src.base.model import (
 
 class InputImageOne(Input):
     name: Literal["InputImageOne"] = "InputImageOne"
-    value: Union[List[Image], Image]
-    type: str = "object"
-
-    @validator("type", pre=True, always=True)
-    def set_type_based_on_value(cls, value, values):
-        value = values.get("value")
-
-        if isinstance(value, Image):
-            return "object"
-        elif isinstance(value, list):
-            return "list"
-
-        return "object"
+    value: Any
+    type: Literal["object"] = "object"
 
     class Config:
         title = "Image Input 1"
@@ -41,19 +28,8 @@ class InputImageOne(Input):
 
 class InputImageTwo(Input):
     name: Literal["InputImageTwo"] = "InputImageTwo"
-    value: Union[List[Image], Image]
-    type: str = "object"
-
-    @validator("type", pre=True, always=True)
-    def set_type_based_on_value(cls, value, values):
-        value = values.get("value")
-
-        if isinstance(value, Image):
-            return "object"
-        elif isinstance(value, list):
-            return "list"
-
-        return "object"
+    value: Any
+    type: Literal["object"] = "object"
 
     class Config:
         title = "Image Input 2"
@@ -88,26 +64,6 @@ class OutputDetections(Output):
 
     class Config:
         title = "Output Detections"
-
-
-class OutputVisualization(Output):
-    name: Literal["OutputVisualization"] = "OutputVisualization"
-    value: Union[List[Image], Image]
-    type: str = "object"
-
-    @validator("type", pre=True, always=True)
-    def set_type_based_on_value(cls, value, values):
-        value = values.get("value")
-
-        if isinstance(value, Image):
-            return "object"
-        elif isinstance(value, list):
-            return "list"
-
-        return "object"
-
-    class Config:
-        title = "Visualization"
 
 
 # ============================================================
@@ -211,7 +167,6 @@ class SiftComparisonTestInputs(Inputs):
 
 class SiftComparisonTestOutputs(Outputs):
     OutputDetections: OutputDetections
-    OutputVisualization: OutputVisualization
 
 
 # ============================================================
