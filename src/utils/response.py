@@ -1,6 +1,5 @@
 from sdks.novavision.src.helper.package import PackageHelper
-
-from components.SiftComparison.src.models.PackageModel import (
+from components.SiftComparisonTest.src.models.PackageModel import (
     PackageModel,
     PackageConfigs,
     ConfigExecutor,
@@ -12,74 +11,52 @@ from components.SiftComparison.src.models.PackageModel import (
 )
 
 
-def build_response_sift_comparison(context):
+def build_response_sift_comparison_test(context):
 
-    # ========================================================
-    # DETECTION OUTPUT
-    # ========================================================
-
-    outputDetections = OutputDetections(
+    # Executor tarafindan olusturulan
+    # Detection listesini OutputDetections
+    # modeline koyuyoruz.
+    output_detections = OutputDetections(
         value=context.output_detections
     )
 
-    # ========================================================
-    # VISUALIZATION OUTPUT
-    # ========================================================
-
-    outputVisualization = OutputVisualization(
-        value=context.visualization_image
+    # Visualize aktifse olusturulan base64
+    # goruntuyu OutputVisualization modeline koyuyoruz.
+    output_visualization = OutputVisualization(
+        value=getattr(context, "output_visualization", None)
     )
 
-    # ========================================================
-    # OUTPUTS
-    # ========================================================
-
-    siftComparisonOutputs = SiftComparisonTestOutputs(
-        OutputDetections=outputDetections,
-        OutputVisualization=outputVisualization
+    # Outputs modelini olusturuyoruz.
+    outputs = SiftComparisonTestOutputs(
+        OutputDetections=output_detections,
+        OutputVisualization=output_visualization
     )
 
-    # ========================================================
-    # RESPONSE
-    # ========================================================
-
-    siftComparisonResponse = SiftComparisonTestResponse(
-        outputs=siftComparisonOutputs
+    # Response modelini olusturuyoruz.
+    response = SiftComparisonTestResponse(
+        outputs=outputs
     )
 
-    # ========================================================
-    # EXECUTOR
-    # ========================================================
-
-    siftComparison = SiftComparisonTest(
-        value=siftComparisonResponse
+    # Executor response'unu olusturuyoruz.
+    executor = SiftComparisonTest(
+        value=response
     )
 
-    # ========================================================
-    # CONFIG EXECUTOR
-    # ========================================================
-
+    # ConfigExecutor olusturuluyor.
     configExecutor = ConfigExecutor(
-        value=siftComparison
+        value=executor
     )
 
-    # ========================================================
-    # PACKAGE CONFIG
-    # ========================================================
-
+    # Package config olusturuluyor.
     packageConfigs = PackageConfigs(
         executor=configExecutor
     )
 
-    # ========================================================
-    # PACKAGE
-    # ========================================================
-
+    # PackageHelper ile Novavision package response'u
+    # olusturuluyor.
     package = PackageHelper(
         packageModel=PackageModel,
         packageConfigs=packageConfigs
     )
 
-    packageModel = package.build_model(context)
-
-    return packageModel
+    return package.build_model(context)
