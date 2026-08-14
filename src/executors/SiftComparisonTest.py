@@ -79,7 +79,8 @@ class SiftComparisonTest(Component):
         )
 
         # ====================================================
-        # VISUALIZATION IMAGES
+        # ORIGINAL IMAGES
+        # These are ONLY used for visualization.
         # ====================================================
 
         self.visualization_input_1 = (
@@ -95,7 +96,7 @@ class SiftComparisonTest(Component):
         )
 
         # ====================================================
-        # OUTPUT
+        # OUTPUT VARIABLES
         # ====================================================
 
         self.output_detections = []
@@ -106,7 +107,7 @@ class SiftComparisonTest(Component):
         return {}
 
     # ========================================================
-    # EXTRACT KEYPOINTS + DESCRIPTORS
+    # EXTRACT KEYPOINTS AND DESCRIPTORS
     # ========================================================
 
     def _extract_keypoints_and_descriptors(
@@ -123,6 +124,7 @@ class SiftComparisonTest(Component):
                 sift_output
             )
 
+        # Sometimes output can be wrapped in "value"
         if isinstance(sift_output, dict):
 
             sift_output = sift_output.get(
@@ -144,6 +146,12 @@ class SiftComparisonTest(Component):
             )
 
         for detection in sift_output:
+
+            if not isinstance(
+                detection,
+                dict
+            ):
+                continue
 
             for kp in detection.get(
                 "keyPoints",
@@ -225,7 +233,7 @@ class SiftComparisonTest(Component):
     ):
 
         # ----------------------------------------------------
-        # OpenCV KeyPoint listesi
+        # Convert SIFT keypoints to OpenCV KeyPoint
         # ----------------------------------------------------
 
         cv_keypoints1 = []
@@ -261,8 +269,9 @@ class SiftComparisonTest(Component):
             )
 
         # ----------------------------------------------------
-        # good_matches şu anda [[DMatch], [DMatch], ...]
-        # drawMatches ise [DMatch, DMatch, ...] bekler.
+        # [[DMatch], [DMatch], ...]
+        # ->
+        # [DMatch, DMatch, ...]
         # ----------------------------------------------------
 
         matches_for_draw = [
@@ -271,7 +280,7 @@ class SiftComparisonTest(Component):
         ]
 
         # ----------------------------------------------------
-        # İki görüntüyü yan yana koyup eşleşmeleri çiz
+        # Draw matching keypoints
         # ----------------------------------------------------
 
         visualization = cv2.drawMatches(
@@ -309,7 +318,7 @@ class SiftComparisonTest(Component):
             )
 
             # =================================================
-            # EXTRACT SIFT OUTPUTS
+            # GET SIFT OUTPUTS
             # =================================================
 
             (
@@ -327,7 +336,7 @@ class SiftComparisonTest(Component):
             )
 
             # =================================================
-            # NOT ENOUGH DESCRIPTORS
+            # CHECK DESCRIPTORS
             # =================================================
 
             if (
@@ -349,16 +358,22 @@ class SiftComparisonTest(Component):
 
                 ]
 
-                # Görüntülerden birini visualization olarak
-                # döndür.
-                self.visualization_image = image1
+                # Original image is returned if
+                # there are not enough descriptors.
+                image1.value = image1.value
+
+                self.visualization_image = Image.set_frame(
+                    img=image1,
+                    package_uID=self.uID,
+                    redis_db=self.redis_db
+                )
 
                 return build_response_sift_comparison(
                     context=self
                 )
 
             # =================================================
-            # MATCHER
+            # SELECT MATCHER
             # =================================================
 
             if self.matcher == "BFMatcher":
@@ -370,12 +385,10 @@ class SiftComparisonTest(Component):
             else:
 
                 matcher = cv2.FlannBasedMatcher(
-
                     dict(
                         algorithm=1,
                         trees=5
                     ),
-
                     dict(
                         checks=50
                     )
@@ -415,7 +428,7 @@ class SiftComparisonTest(Component):
                     )
 
             # =================================================
-            # GOOD MATCH COUNT
+            # MATCH RESULT
             # =================================================
 
             good_matches_count = len(
@@ -503,7 +516,7 @@ class SiftComparisonTest(Component):
             ]
 
             # =================================================
-            # CREATE VISUALIZATION
+            # VISUALIZATION
             # =================================================
 
             visualization = self._create_visualization(
@@ -518,7 +531,7 @@ class SiftComparisonTest(Component):
             )
 
             # =================================================
-            # SAVE VISUALIZATION
+            # STORE VISUALIZATION
             # =================================================
 
             image1.value = visualization
@@ -537,7 +550,11 @@ class SiftComparisonTest(Component):
                 context=self
             )
 
-        except Exception:
+        except Exception as e:
+
+            # =================================================
+            # ERROR OUTPUT
+            # =================================================
 
             self.output_detections = [
 
@@ -553,11 +570,8 @@ class SiftComparisonTest(Component):
 
             ]
 
-            # Hata durumunda visualization inputlarından
-            # birini döndürmeye çalış.
-            self.visualization_image = (
-                self.visualization_input_1
-            )
+            # Don't leave visualization undefined.
+            self.visualization_image = None
 
             return build_response_sift_comparison(
                 context=self
