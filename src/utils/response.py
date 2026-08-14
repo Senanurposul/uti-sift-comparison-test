@@ -1,6 +1,6 @@
 from sdks.novavision.src.helper.package import PackageHelper
 
-from components.SiftComparisonTest.src.models.PackageModel import (
+from components.SiftComparison.src.models.PackageModel import (
     PackageModel,
     PackageConfigs,
     ConfigExecutor,
@@ -12,69 +12,45 @@ from components.SiftComparisonTest.src.models.PackageModel import (
 )
 
 
-def build_response_sift_comparison_test(context):
+def build_response_sift_comparison(context):
 
-    # ========================================================
-    # OUTPUT DETECTIONS
-    # ========================================================
-
+    # Detection çıktısını oluştur
     output_detections = OutputDetections(
         value=context.output_detections
     )
 
-    # ========================================================
-    # VISUALIZATION OUTPUT
-    # ========================================================
-
+    # Visualization görüntüsünü oluştur
     output_visualization = OutputVisualization(
-        value=context.output_visualization
+        value=context.visualization_image
     )
 
-    # ========================================================
-    # OUTPUTS
-    # ========================================================
-
+    # Outputs modelini oluştur
     outputs = SiftComparisonTestOutputs(
         OutputDetections=output_detections,
         OutputVisualization=output_visualization
     )
 
-    # ========================================================
-    # RESPONSE
-    # ========================================================
-
+    # Response modelini oluştur
     response = SiftComparisonTestResponse(
         outputs=outputs
     )
 
-    # ========================================================
-    # EXECUTOR
-    # ========================================================
-
+    # Executor response'unu oluştur
     executor = SiftComparisonTest(
         value=response
     )
 
-    # ========================================================
-    # CONFIG EXECUTOR
-    # ========================================================
-
+    # ConfigExecutor oluştur
     configExecutor = ConfigExecutor(
         value=executor
     )
 
-    # ========================================================
-    # PACKAGE CONFIG
-    # ========================================================
-
+    # Package config oluştur
     packageConfigs = PackageConfigs(
         executor=configExecutor
     )
 
-    # ========================================================
-    # PACKAGE
-    # ========================================================
-
+    # Novavision package response'u oluştur
     package = PackageHelper(
         packageModel=PackageModel,
         packageConfigs=packageConfigs

@@ -1,11 +1,12 @@
-from typing import Optional, Union, Literal, Any, List
+from pydantic import Field, validator
+from typing import List, Union, Literal, Optional, Any
 
 from sdks.novavision.src.base.model import (
     Package,
     Image,
     Inputs,
-    Outputs,
     Configs,
+    Outputs,
     Response,
     Request,
     Output,
@@ -17,6 +18,46 @@ from sdks.novavision.src.base.model import (
 # ============================================================
 # INPUTS
 # ============================================================
+
+class InputImageOne(Input):
+    name: Literal["InputImageOne"] = "InputImageOne"
+    value: Union[List[Image], Image]
+    type: str = "object"
+
+    @validator("type", pre=True, always=True)
+    def set_type_based_on_value(cls, value, values):
+        value = values.get("value")
+
+        if isinstance(value, Image):
+            return "object"
+        elif isinstance(value, list):
+            return "list"
+
+        return "object"
+
+    class Config:
+        title = "Image Input 1"
+
+
+class InputImageTwo(Input):
+    name: Literal["InputImageTwo"] = "InputImageTwo"
+    value: Union[List[Image], Image]
+    type: str = "object"
+
+    @validator("type", pre=True, always=True)
+    def set_type_based_on_value(cls, value, values):
+        value = values.get("value")
+
+        if isinstance(value, Image):
+            return "object"
+        elif isinstance(value, list):
+            return "list"
+
+        return "object"
+
+    class Config:
+        title = "Image Input 2"
+
 
 class InputSIFTOutput1(Input):
     name: Literal["InputSIFTOutput1"] = "InputSIFTOutput1"
@@ -36,24 +77,6 @@ class InputSIFTOutput2(Input):
         title = "SIFT Output 2"
 
 
-class InputImage1(Input):
-    name: Literal["InputImage1"] = "InputImage1"
-    value: Union[List[Image], Image]
-    type: Literal["object"] = "object"
-
-    class Config:
-        title = "Image Input 1"
-
-
-class InputImage2(Input):
-    name: Literal["InputImage2"] = "InputImage2"
-    value: Union[List[Image], Image]
-    type: Literal["object"] = "object"
-
-    class Config:
-        title = "Image Input 2"
-
-
 # ============================================================
 # OUTPUTS
 # ============================================================
@@ -70,7 +93,18 @@ class OutputDetections(Output):
 class OutputVisualization(Output):
     name: Literal["OutputVisualization"] = "OutputVisualization"
     value: Union[List[Image], Image]
-    type: Literal["object"] = "object"
+    type: str = "object"
+
+    @validator("type", pre=True, always=True)
+    def set_type_based_on_value(cls, value, values):
+        value = values.get("value")
+
+        if isinstance(value, Image):
+            return "object"
+        elif isinstance(value, list):
+            return "list"
+
+        return "object"
 
     class Config:
         title = "Visualization"
@@ -81,11 +115,6 @@ class OutputVisualization(Output):
 # ============================================================
 
 class GoodMatchesThreshold(Config):
-    """
-    Minimum number of good matches required
-    to classify two images as Match.
-    """
-
     name: Literal["GoodMatchesThreshold"] = "GoodMatchesThreshold"
     value: int = 50
     type: Literal["number"] = "number"
@@ -99,10 +128,6 @@ class GoodMatchesThreshold(Config):
 
 
 class RatioThreshold(Config):
-    """
-    Lowe's Ratio Test threshold.
-    """
-
     name: Literal["RatioThreshold"] = "RatioThreshold"
     value: float = 0.7
     type: Literal["number"] = "number"
@@ -120,10 +145,6 @@ class RatioThreshold(Config):
 # ============================================================
 
 class MatcherFlann(Config):
-    """
-    FLANN matcher for SIFT descriptors.
-    """
-
     name: Literal["FlannBasedMatcher"] = "FlannBasedMatcher"
     value: Literal["FlannBasedMatcher"] = "FlannBasedMatcher"
     type: Literal["string"] = "string"
@@ -137,10 +158,6 @@ class MatcherFlann(Config):
 
 
 class MatcherBF(Config):
-    """
-    Brute Force matcher for SIFT descriptors.
-    """
-
     name: Literal["BFMatcher"] = "BFMatcher"
     value: Literal["BFMatcher"] = "BFMatcher"
     type: Literal["string"] = "string"
@@ -154,14 +171,6 @@ class MatcherBF(Config):
 
 
 class Matcher(Config):
-    """
-    Select the descriptor matching algorithm.
-
-    Options:
-        - FlannBasedMatcher
-        - BFMatcher
-    """
-
     name: Literal["Matcher"] = "Matcher"
 
     value: Union[
@@ -194,10 +203,10 @@ class SiftComparisonTestConfigs(Configs):
 # ============================================================
 
 class SiftComparisonTestInputs(Inputs):
+    InputImageOne: InputImageOne
+    InputImageTwo: InputImageTwo
     InputSIFTOutput1: InputSIFTOutput1
     InputSIFTOutput2: InputSIFTOutput2
-    InputImage1: InputImage1
-    InputImage2: InputImage2
 
 
 class SiftComparisonTestOutputs(Outputs):
@@ -232,13 +241,6 @@ class SiftComparisonTestResponse(Response):
 # ============================================================
 
 class SiftComparisonTest(Config):
-    """
-    Compares two images using SIFT descriptors
-    received from external SIFT blocks.
-
-    The package itself does not calculate SIFT features.
-    """
-
     name: Literal["SiftComparisonTest"] = "SiftComparisonTest"
 
     value: Union[
@@ -260,13 +262,6 @@ class SiftComparisonTest(Config):
 
 
 class ConfigExecutor(Config):
-    """
-    SIFT Comparison executor.
-
-    Compares SIFT descriptors using either
-    FLANN or Brute Force matching.
-    """
-
     name: Literal["ConfigExecutor"] = "ConfigExecutor"
 
     value: Union[SiftComparisonTest]
