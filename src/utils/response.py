@@ -8,45 +8,73 @@ from components.SiftComparisonTest.src.models.PackageModel import (
     SiftComparisonTestResponse,
     SiftComparisonTestOutputs,
     OutputDetections,
+    OutputVisualization,
 )
 
 
 def build_response_sift_comparison_test(context):
 
-    # Executor tarafından oluşturulan
-    # Detection listesini OutputDetections
-    # modeline koyuyoruz.
+    # ========================================================
+    # Detection output
+    # ========================================================
+
     output_detections = OutputDetections(
         value=context.output_detections
     )
 
-    # Outputs modelini oluşturuyoruz.
-    outputs = SiftComparisonTestOutputs(
-        OutputDetections=output_detections
+    # ========================================================
+    # Visualization output
+    # ========================================================
+
+    output_visualization = OutputVisualization(
+        value=context.output_visualization
     )
 
-    # Response modelini oluşturuyoruz.
+    # ========================================================
+    # Outputs
+    # ========================================================
+
+    outputs = SiftComparisonTestOutputs(
+        OutputDetections=output_detections,
+        OutputVisualization=output_visualization
+    )
+
+    # ========================================================
+    # Response
+    # ========================================================
+
     response = SiftComparisonTestResponse(
         outputs=outputs
     )
 
-    # Executor response'unu oluşturuyoruz.
+    # ========================================================
+    # Executor
+    # ========================================================
+
     executor = SiftComparisonTest(
         value=response
     )
 
-    # ConfigExecutor oluşturuluyor.
+    # ========================================================
+    # Config Executor
+    # ========================================================
+
     configExecutor = ConfigExecutor(
         value=executor
     )
 
-    # Package config oluşturuluyor.
+    # ========================================================
+    # Package Config
+    # ========================================================
+
     packageConfigs = PackageConfigs(
         executor=configExecutor
     )
 
-    # PackageHelper ile Novavision package response'u
-    # oluşturuluyor.
+    # ========================================================
+    # Package Response
+    # ========================================================
+
     package = PackageHelper(
         packageModel=PackageModel,
         packageConfigs=packageConfigs
