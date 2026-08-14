@@ -1,9 +1,7 @@
-from pydantic import validator
-from typing import List, Optional, Union, Literal, Any
+from typing import Optional, Union, Literal, Any
 
 from sdks.novavision.src.base.model import (
     Package,
-    Image,
     Inputs,
     Outputs,
     Configs,
@@ -37,56 +35,6 @@ class InputSIFTOutput2(Input):
         title = "SIFT Output 2"
 
 
-# ------------------------------------------------------------
-# Visualization için kullanılacak birinci görüntü
-# ------------------------------------------------------------
-
-class InputImage1(Input):
-    name: Literal["InputImage1"] = "InputImage1"
-    value: Union[List[Image], Image]
-    type: str = "object"
-
-    @validator("type", pre=True, always=True)
-    def set_type_based_on_value(cls, value, values):
-        value = values.get("value")
-
-        if isinstance(value, Image):
-            return "object"
-
-        elif isinstance(value, list):
-            return "list"
-
-        return "object"
-
-    class Config:
-        title = "Image 1"
-
-
-# ------------------------------------------------------------
-# Visualization için kullanılacak ikinci görüntü
-# ------------------------------------------------------------
-
-class InputImage2(Input):
-    name: Literal["InputImage2"] = "InputImage2"
-    value: Union[List[Image], Image]
-    type: str = "object"
-
-    @validator("type", pre=True, always=True)
-    def set_type_based_on_value(cls, value, values):
-        value = values.get("value")
-
-        if isinstance(value, Image):
-            return "object"
-
-        elif isinstance(value, list):
-            return "list"
-
-        return "object"
-
-    class Config:
-        title = "Image 2"
-
-
 # ============================================================
 # OUTPUTS
 # ============================================================
@@ -98,31 +46,6 @@ class OutputDetections(Output):
 
     class Config:
         title = "Output Detections"
-
-
-# ------------------------------------------------------------
-# Visualization sonucu olarak oluşturulan görüntü
-# ------------------------------------------------------------
-
-class OutputVisualization(Output):
-    name: Literal["OutputVisualization"] = "OutputVisualization"
-    value: Union[List[Image], Image]
-    type: str = "object"
-
-    @validator("type", pre=True, always=True)
-    def set_type_based_on_value(cls, value, values):
-        value = values.get("value")
-
-        if isinstance(value, Image):
-            return "object"
-
-        elif isinstance(value, list):
-            return "list"
-
-        return "object"
-
-    class Config:
-        title = "Visualization"
 
 
 # ============================================================
@@ -252,16 +175,9 @@ class SiftComparisonTestInputs(Inputs):
     InputSIFTOutput1: InputSIFTOutput1
     InputSIFTOutput2: InputSIFTOutput2
 
-    # Visualization için orijinal görüntüler
-    InputImage1: InputImage1
-    InputImage2: InputImage2
-
 
 class SiftComparisonTestOutputs(Outputs):
     OutputDetections: OutputDetections
-
-    # drawMatches() sonucunu verecek output
-    OutputVisualization: OutputVisualization
 
 
 # ============================================================
