@@ -80,7 +80,6 @@ class SiftComparisonTest(Component):
 
         # ====================================================
         # ORIGINAL IMAGES
-        # These are ONLY used for visualization.
         # ====================================================
 
         self.visualization_input_1 = (
@@ -124,7 +123,6 @@ class SiftComparisonTest(Component):
                 sift_output
             )
 
-        # Sometimes output can be wrapped in "value"
         if isinstance(sift_output, dict):
 
             sift_output = sift_output.get(
@@ -232,10 +230,6 @@ class SiftComparisonTest(Component):
         good_matches
     ):
 
-        # ----------------------------------------------------
-        # Convert SIFT keypoints to OpenCV KeyPoint
-        # ----------------------------------------------------
-
         cv_keypoints1 = []
 
         for kp in keypoints1_dicts:
@@ -268,20 +262,10 @@ class SiftComparisonTest(Component):
                 )
             )
 
-        # ----------------------------------------------------
-        # [[DMatch], [DMatch], ...]
-        # ->
-        # [DMatch, DMatch, ...]
-        # ----------------------------------------------------
-
         matches_for_draw = [
             match[0]
             for match in good_matches
         ]
-
-        # ----------------------------------------------------
-        # Draw matching keypoints
-        # ----------------------------------------------------
 
         visualization = cv2.drawMatches(
             image1,
@@ -303,23 +287,33 @@ class SiftComparisonTest(Component):
 
         try:
 
+            print("=== SIFT COMPARISON START ===")
+
             # =================================================
             # GET ORIGINAL IMAGES
             # =================================================
+
+            print("Getting visualization image 1...")
 
             image1 = Image.get_frame(
                 img=self.visualization_input_1,
                 redis_db=self.redis_db
             )
 
+            print("Getting visualization image 2...")
+
             image2 = Image.get_frame(
                 img=self.visualization_input_2,
                 redis_db=self.redis_db
             )
 
+            print("Images received.")
+
             # =================================================
             # GET SIFT OUTPUTS
             # =================================================
+
+            print("Extracting SIFT output 1...")
 
             (
                 keypoints1_dicts,
@@ -328,11 +322,23 @@ class SiftComparisonTest(Component):
                 self.sift_output_1
             )
 
+            print(
+                "SIFT 1 descriptors:",
+                len(descriptors1)
+            )
+
+            print("Extracting SIFT output 2...")
+
             (
                 keypoints2_dicts,
                 descriptors2
             ) = self._extract_keypoints_and_descriptors(
                 self.sift_output_2
+            )
+
+            print(
+                "SIFT 2 descriptors:",
+                len(descriptors2)
             )
 
             # =================================================
@@ -343,6 +349,10 @@ class SiftComparisonTest(Component):
                 len(descriptors1) < 2
                 or len(descriptors2) < 2
             ):
+
+                print(
+                    "Not enough descriptors."
+                )
 
                 self.output_detections = [
 
@@ -358,8 +368,6 @@ class SiftComparisonTest(Component):
 
                 ]
 
-                # Original image is returned if
-                # there are not enough descriptors.
                 image1.value = image1.value
 
                 self.visualization_image = Image.set_frame(
@@ -375,6 +383,11 @@ class SiftComparisonTest(Component):
             # =================================================
             # SELECT MATCHER
             # =================================================
+
+            print(
+                "Matcher:",
+                self.matcher
+            )
 
             if self.matcher == "BFMatcher":
 
@@ -398,10 +411,17 @@ class SiftComparisonTest(Component):
             # KNN MATCHING
             # =================================================
 
+            print("Running KNN matching...")
+
             matches = matcher.knnMatch(
                 descriptors1,
                 descriptors2,
                 k=2
+            )
+
+            print(
+                "Raw matches:",
+                len(matches)
             )
 
             # =================================================
@@ -427,6 +447,11 @@ class SiftComparisonTest(Component):
                         [m]
                     )
 
+            print(
+                "Good matches:",
+                len(good_matches)
+            )
+
             # =================================================
             # MATCH RESULT
             # =================================================
@@ -438,6 +463,11 @@ class SiftComparisonTest(Component):
             images_match = (
                 good_matches_count
                 >= self.good_matches_threshold
+            )
+
+            print(
+                "Images match:",
+                images_match
             )
 
             # =================================================
@@ -515,9 +545,17 @@ class SiftComparisonTest(Component):
 
             ]
 
+            print(
+                "Detection output created."
+            )
+
             # =================================================
             # VISUALIZATION
             # =================================================
+
+            print(
+                "Creating visualization..."
+            )
 
             visualization = self._create_visualization(
 
@@ -530,11 +568,19 @@ class SiftComparisonTest(Component):
                 good_matches
             )
 
+            print(
+                "Visualization created."
+            )
+
             # =================================================
-            # STORE VISUALIZATION
+            # SAVE VISUALIZATION
             # =================================================
 
             image1.value = visualization
+
+            print(
+                "Saving visualization frame..."
+            )
 
             self.visualization_image = Image.set_frame(
                 img=image1,
@@ -542,40 +588,49 @@ class SiftComparisonTest(Component):
                 redis_db=self.redis_db
             )
 
+            print(
+                "Visualization frame saved."
+            )
+
             # =================================================
             # RESPONSE
             # =================================================
 
-            return build_response_sift_comparison(
+            print(
+                "Building response..."
+            )
+
+            response = build_response_sift_comparison(
                 context=self
             )
+
+            print(
+                "=== SIFT COMPARISON SUCCESS ==="
+            )
+
+            return response
 
         except Exception as e:
 
-            # =================================================
-            # ERROR OUTPUT
-            # =================================================
-
-            self.output_detections = [
-
-                Detection(
-                    boundingBox=None,
-                    keyPoints=[],
-                    connections=[],
-                    confidence=0.0,
-                    classId=0,
-                    classLabel="NoMatch",
-                    imgUID=self.uID
-                )
-
-            ]
-
-            # Don't leave visualization undefined.
-            self.visualization_image = None
-
-            return build_response_sift_comparison(
-                context=self
+            print(
+                "========================================"
             )
+            print(
+                "SIFT COMPARISON ERROR"
+            )
+            print(
+                "ERROR TYPE:",
+                type(e).__name__
+            )
+            print(
+                "ERROR:",
+                str(e)
+            )
+            print(
+                "========================================"
+            )
+
+            raise
 
 
 # ============================================================
