@@ -16,11 +16,11 @@ from sdks.novavision.src.base.model import (
 
 
 # ============================================================
-# INPUT IMAGE 1
+# VISUALIZATION IMAGE INPUT 1
 # ============================================================
 
-class InputImageOne(Input):
-    name: Literal["InputImageOne"] = "InputImageOne"
+class InputVisualization1(Input):
+    name: Literal["InputVisualization1"] = "InputVisualization1"
     value: Union[List[Image], Image]
     type: str = "object"
 
@@ -36,15 +36,15 @@ class InputImageOne(Input):
         return "object"
 
     class Config:
-        title = "Image Input 1"
+        title = "Visualization Image 1"
 
 
 # ============================================================
-# INPUT IMAGE 2
+# VISUALIZATION IMAGE INPUT 2
 # ============================================================
 
-class InputImageTwo(Input):
-    name: Literal["InputImageTwo"] = "InputImageTwo"
+class InputVisualization2(Input):
+    name: Literal["InputVisualization2"] = "InputVisualization2"
     value: Union[List[Image], Image]
     type: str = "object"
 
@@ -60,11 +60,11 @@ class InputImageTwo(Input):
         return "object"
 
     class Config:
-        title = "Image Input 2"
+        title = "Visualization Image 2"
 
 
 # ============================================================
-# SIFT OUTPUT INPUTS
+# SIFT OUTPUT INPUT 1
 # ============================================================
 
 class InputSIFTOutput1(Input):
@@ -76,6 +76,10 @@ class InputSIFTOutput1(Input):
         title = "SIFT Output 1"
 
 
+# ============================================================
+# SIFT OUTPUT INPUT 2
+# ============================================================
+
 class InputSIFTOutput2(Input):
     name: Literal["InputSIFTOutput2"] = "InputSIFTOutput2"
     value: Optional[Any]
@@ -86,7 +90,7 @@ class InputSIFTOutput2(Input):
 
 
 # ============================================================
-# OUTPUT
+# DETECTION OUTPUT
 # ============================================================
 
 class OutputDetections(Output):
@@ -99,7 +103,31 @@ class OutputDetections(Output):
 
 
 # ============================================================
-# CONFIGS
+# VISUALIZATION OUTPUT
+# ============================================================
+
+class OutputVisualization(Output):
+    name: Literal["OutputVisualization"] = "OutputVisualization"
+    value: Union[List[Image], Image]
+    type: str = "object"
+
+    @validator("type", pre=True, always=True)
+    def set_type_based_on_value(cls, value, values):
+        value = values.get("value")
+
+        if isinstance(value, Image):
+            return "object"
+        elif isinstance(value, list):
+            return "list"
+
+        return "object"
+
+    class Config:
+        title = "Visualization"
+
+
+# ============================================================
+# GOOD MATCHES THRESHOLD
 # ============================================================
 
 class GoodMatchesThreshold(Config):
@@ -115,6 +143,10 @@ class GoodMatchesThreshold(Config):
         }
 
 
+# ============================================================
+# RATIO THRESHOLD
+# ============================================================
+
 class RatioThreshold(Config):
     name: Literal["RatioThreshold"] = "RatioThreshold"
     value: float = 0.7
@@ -129,7 +161,7 @@ class RatioThreshold(Config):
 
 
 # ============================================================
-# MATCHER
+# FLANN MATCHER
 # ============================================================
 
 class MatcherFlann(Config):
@@ -145,6 +177,10 @@ class MatcherFlann(Config):
         }
 
 
+# ============================================================
+# BF MATCHER
+# ============================================================
+
 class MatcherBF(Config):
     name: Literal["BFMatcher"] = "BFMatcher"
     value: Literal["BFMatcher"] = "BFMatcher"
@@ -157,6 +193,10 @@ class MatcherBF(Config):
             "shortDescription": "Brute-force descriptor matching"
         }
 
+
+# ============================================================
+# MATCHER
+# ============================================================
 
 class Matcher(Config):
     name: Literal["Matcher"] = "Matcher"
@@ -187,18 +227,23 @@ class SiftComparisonTestConfigs(Configs):
 
 
 # ============================================================
-# INPUT / OUTPUT MODELS
+# INPUT MODEL
 # ============================================================
 
 class SiftComparisonTestInputs(Inputs):
-    InputImageOne: InputImageOne
-    InputImageTwo: InputImageTwo
+    InputVisualization1: InputVisualization1
+    InputVisualization2: InputVisualization2
     InputSIFTOutput1: InputSIFTOutput1
     InputSIFTOutput2: InputSIFTOutput2
 
 
+# ============================================================
+# OUTPUT MODEL
+# ============================================================
+
 class SiftComparisonTestOutputs(Outputs):
     OutputDetections: OutputDetections
+    OutputVisualization: OutputVisualization
 
 
 # ============================================================
@@ -247,6 +292,10 @@ class SiftComparisonTest(Config):
             "shortDescription": "Feature-based image matching"
         }
 
+
+# ============================================================
+# CONFIG EXECUTOR
+# ============================================================
 
 class ConfigExecutor(Config):
     name: Literal["ConfigExecutor"] = "ConfigExecutor"
