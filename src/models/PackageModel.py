@@ -1,7 +1,8 @@
-from typing import Optional, Union, Literal, Any
+from typing import Optional, Union, Literal, Any, List
 
 from sdks.novavision.src.base.model import (
     Package,
+    Image,
     Inputs,
     Outputs,
     Configs,
@@ -35,6 +36,24 @@ class InputSIFTOutput2(Input):
         title = "SIFT Output 2"
 
 
+class InputImage1(Input):
+    name: Literal["InputImage1"] = "InputImage1"
+    value: Union[List[Image], Image]
+    type: Literal["object"] = "object"
+
+    class Config:
+        title = "Image Input 1"
+
+
+class InputImage2(Input):
+    name: Literal["InputImage2"] = "InputImage2"
+    value: Union[List[Image], Image]
+    type: Literal["object"] = "object"
+
+    class Config:
+        title = "Image Input 2"
+
+
 # ============================================================
 # OUTPUTS
 # ============================================================
@@ -46,6 +65,15 @@ class OutputDetections(Output):
 
     class Config:
         title = "Output Detections"
+
+
+class OutputVisualization(Output):
+    name: Literal["OutputVisualization"] = "OutputVisualization"
+    value: Union[List[Image], Image]
+    type: Literal["object"] = "object"
+
+    class Config:
+        title = "Visualization"
 
 
 # ============================================================
@@ -73,12 +101,6 @@ class GoodMatchesThreshold(Config):
 class RatioThreshold(Config):
     """
     Lowe's Ratio Test threshold.
-
-    Lower value:
-        More strict matching.
-
-    Higher value:
-        More tolerant matching.
     """
 
     name: Literal["RatioThreshold"] = "RatioThreshold"
@@ -174,10 +196,13 @@ class SiftComparisonTestConfigs(Configs):
 class SiftComparisonTestInputs(Inputs):
     InputSIFTOutput1: InputSIFTOutput1
     InputSIFTOutput2: InputSIFTOutput2
+    InputImage1: InputImage1
+    InputImage2: InputImage2
 
 
 class SiftComparisonTestOutputs(Outputs):
     OutputDetections: OutputDetections
+    OutputVisualization: OutputVisualization
 
 
 # ============================================================
