@@ -1,7 +1,6 @@
 import os
 import sys
 import json
-
 import cv2
 import numpy as np
 
@@ -83,7 +82,6 @@ class SiftComparisonTest(Component):
         # ====================================================
 
         self.output_detections = []
-
         self.visualization_image = None
 
     @staticmethod
@@ -94,10 +92,7 @@ class SiftComparisonTest(Component):
     # SIFT OUTPUT PARSING
     # ========================================================
 
-    def _extract_keypoints_and_descriptors(
-        self,
-        sift_output
-    ):
+    def _extract_keypoints_and_descriptors(self, sift_output):
 
         keypoints_dicts = []
         descriptors = []
@@ -106,12 +101,12 @@ class SiftComparisonTest(Component):
             sift_output = json.loads(sift_output)
 
         if isinstance(sift_output, dict):
-
-            if "value" in sift_output:
-                sift_output = sift_output["value"]
+            sift_output = sift_output.get(
+                "value",
+                sift_output
+            )
 
         if not isinstance(sift_output, list):
-
             return (
                 keypoints_dicts,
                 np.empty(
@@ -154,7 +149,6 @@ class SiftComparisonTest(Component):
                 )
 
         if not descriptors:
-
             return (
                 keypoints_dicts,
                 np.empty(
@@ -213,16 +207,7 @@ class SiftComparisonTest(Component):
         ]
 
         # ----------------------------------------------------
-        # drawMatches düz DMatch listesi bekliyor.
-        # ----------------------------------------------------
-
-        draw_matches = [
-            match
-            for match in good_matches
-        ]
-
-        # ----------------------------------------------------
-        # Visualization
+        # Good matches zaten DMatch listesi
         # ----------------------------------------------------
 
         visualization = cv2.drawMatches(
@@ -230,7 +215,7 @@ class SiftComparisonTest(Component):
             cv_keypoints1,
             image2,
             cv_keypoints2,
-            draw_matches,
+            good_matches,
             None,
             flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS
         )
@@ -264,7 +249,7 @@ class SiftComparisonTest(Component):
             )
 
             # =================================================
-            # 2. IMAGE'LARI AL
+            # 2. ORIGINAL IMAGE'LARI AL
             # =================================================
 
             img1 = Image.get_frame(
@@ -281,7 +266,7 @@ class SiftComparisonTest(Component):
             image2 = img2.value
 
             # =================================================
-            # 3. DESCRIPTOR KONTROLÜ
+            # 3. YETERSİZ DESCRIPTOR
             # =================================================
 
             if (
@@ -301,14 +286,20 @@ class SiftComparisonTest(Component):
                     )
                 ]
 
-                self.visualization_image = (
-                    self._create_visualization(
-                        image1,
-                        image2,
-                        keypoints1_dicts,
-                        keypoints2_dicts,
-                        []
-                    )
+                visualization = self._create_visualization(
+                    image1,
+                    image2,
+                    keypoints1_dicts,
+                    keypoints2_dicts,
+                    []
+                )
+
+                img1.value = visualization
+
+                self.visualization_image = Image.set_frame(
+                    img=img1,
+                    package_uID=self.uID,
+                    redis_db=self.redis_db
                 )
 
                 return build_response_sift_comparison(
@@ -364,7 +355,6 @@ class SiftComparisonTest(Component):
                     m.distance
                     < self.ratio_threshold * n.distance
                 ):
-
                     good_matches.append(m)
 
             # =================================================
@@ -442,17 +432,27 @@ class SiftComparisonTest(Component):
             ]
 
             # =================================================
-            # 11. VISUALIZATION
+            # 11. CREATE VISUALIZATION
             # =================================================
 
-            self.visualization_image = (
-                self._create_visualization(
-                    image1=image1,
-                    image2=image2,
-                    keypoints1_dicts=keypoints1_dicts,
-                    keypoints2_dicts=keypoints2_dicts,
-                    good_matches=good_matches
-                )
+            visualization = self._create_visualization(
+                image1=image1,
+                image2=image2,
+                keypoints1_dicts=keypoints1_dicts,
+                keypoints2_dicts=keypoints2_dicts,
+                good_matches=good_matches
+            )
+
+            # =================================================
+            # 12. CONVERT TO NOVAVISION IMAGE
+            # =================================================
+
+            img1.value = visualization
+
+            self.visualization_image = Image.set_frame(
+                img=img1,
+                package_uID=self.uID,
+                redis_db=self.redis_db
             )
 
         except Exception as e:
@@ -465,7 +465,7 @@ class SiftComparisonTest(Component):
             raise
 
         # =====================================================
-        # 12. RESPONSE
+        # 13. RESPONSE
         # =====================================================
 
         return build_response_sift_comparison(
@@ -477,7 +477,7 @@ class SiftComparisonTest(Component):
 # MAIN
 # ============================================================
 
-if "__name__" == "__main__":
+if __name__ == "__main__":
     Executor(
         sys.argv[1]
     ).run()
