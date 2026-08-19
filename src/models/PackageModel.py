@@ -84,9 +84,6 @@ class GoodMatchesThreshold(Config):
 
     class Config:
         title = "Good Matches Threshold"
-        json_schema_extra = {
-            "shortDescription": "Minimum good matches required"
-        }
 
 
 class RatioThreshold(Config):
@@ -97,9 +94,6 @@ class RatioThreshold(Config):
 
     class Config:
         title = "Ratio Threshold"
-        json_schema_extra = {
-            "shortDescription": "Lowe's ratio test threshold"
-        }
 
 
 class MatcherFlann(Config):
@@ -144,7 +138,7 @@ class SiftComparisonTestConfigs(Configs):
 
 
 # ============================================================
-# INPUT / OUTPUT MODELS
+# REQUEST / RESPONSE
 # ============================================================
 
 class SiftComparisonTestInputs(Inputs):
@@ -171,7 +165,7 @@ class SiftComparisonTestResponse(Response):
 
 
 # ============================================================
-# EXECUTOR CONFIGURATION
+# EXECUTOR CONFIG
 # ============================================================
 
 class SiftComparisonTest(Config):
@@ -213,7 +207,7 @@ class PackageConfigs(Configs):
 
 
 # ============================================================
-# PACKAGE MODEL
+# PACKAGE
 # ============================================================
 
 class PackageModel(Package):

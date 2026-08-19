@@ -17,20 +17,20 @@ def build_response_sift_comparison_test(context):
         value=context.output_detections
     )
 
-    siftComparisonTestOutputs = SiftComparisonTestOutputs(
+    outputs = SiftComparisonTestOutputs(
         OutputDetections=outputDetections
     )
 
-    siftComparisonTestResponse = SiftComparisonTestResponse(
-        outputs=siftComparisonTestOutputs
+    response = SiftComparisonTestResponse(
+        outputs=outputs
     )
 
-    siftComparisonTest = SiftComparisonTest(
-        value=siftComparisonTestResponse
+    executor = SiftComparisonTest(
+        value=response
     )
 
     configExecutor = ConfigExecutor(
-        value=siftComparisonTest
+        value=executor
     )
 
     packageConfigs = PackageConfigs(
@@ -42,8 +42,4 @@ def build_response_sift_comparison_test(context):
         packageConfigs=packageConfigs
     )
 
-    packageModel = package.build_model(
-        context
-    )
-
-    return packageModel
+    return package.build_model(context)
