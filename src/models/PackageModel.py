@@ -1,11 +1,11 @@
-from typing import Optional, Union, Literal, Any
-
+from pydantic import Field, validator
+from typing import List, Union, Literal, Optional, Any
 from sdks.novavision.src.base.model import (
     Package,
     Image,
     Inputs,
-    Outputs,
     Configs,
+    Outputs,
     Response,
     Request,
     Output,
@@ -13,13 +13,48 @@ from sdks.novavision.src.base.model import (
     Config
 )
 
-
 # ============================================================
 # INPUTS
 # ============================================================
 
+class InputImageOne(Input):
+    name: Literal["inputImageOne"] = "inputImageOne"
+    value: Union[List[Image], Image]
+    type: str = "object"
+
+    @validator("type", pre=True, always=True)
+    def set_type_based_on_value(cls, value, values):
+        val = values.get("value")
+        if isinstance(val, Image):
+            return "object"
+        elif isinstance(val, list):
+            return "list"
+        return "object"
+
+    class Config:
+        title = "Image Input 1"
+
+
+class InputImageTwo(Input):
+    name: Literal["inputImageTwo"] = "inputImageTwo"
+    value: Union[List[Image], Image]
+    type: str = "object"
+
+    @validator("type", pre=True, always=True)
+    def set_type_based_on_value(cls, value, values):
+        val = values.get("value")
+        if isinstance(val, Image):
+            return "object"
+        elif isinstance(val, list):
+            return "list"
+        return "object"
+
+    class Config:
+        title = "Image Input 2"
+
+
 class InputSIFTOutput1(Input):
-    name: Literal["InputSIFTOutput1"] = "InputSIFTOutput1"
+    name: Literal["inputSIFTOutput1"] = "inputSIFTOutput1"
     value: Optional[Any] = None
     type: Literal["object"] = "object"
 
@@ -28,7 +63,7 @@ class InputSIFTOutput1(Input):
 
 
 class InputSIFTOutput2(Input):
-    name: Literal["InputSIFTOutput2"] = "InputSIFTOutput2"
+    name: Literal["inputSIFTOutput2"] = "inputSIFTOutput2"
     value: Optional[Any] = None
     type: Literal["object"] = "object"
 
@@ -36,30 +71,12 @@ class InputSIFTOutput2(Input):
         title = "SIFT Output 2"
 
 
-class InputImage1(Input):
-    name: Literal["InputImage1"] = "InputImage1"
-    value: Optional[Image] = None
-    type: Literal["image"] = "image"
-
-    class Config:
-        title = "Image 1"
-
-
-class InputImage2(Input):
-    name: Literal["InputImage2"] = "InputImage2"
-    value: Optional[Image] = None
-    type: Literal["image"] = "image"
-
-    class Config:
-        title = "Image 2"
-
-
 # ============================================================
 # OUTPUTS
 # ============================================================
 
 class OutputDetections(Output):
-    name: Literal["OutputDetections"] = "OutputDetections"
+    name: Literal["outputDetections"] = "outputDetections"
     value: Optional[Any] = None
     type: Literal["list"] = "list"
 
@@ -68,9 +85,18 @@ class OutputDetections(Output):
 
 
 class OutputMatchesImage(Output):
-    name: Literal["OutputMatchesImage"] = "OutputMatchesImage"
-    value: Optional[Image] = None
-    type: Literal["image"] = "image"
+    name: Literal["outputMatchesImage"] = "outputMatchesImage"
+    value: Union[List[Image], Image]
+    type: str = "object"
+
+    @validator("type", pre=True, always=True)
+    def set_type_based_on_value(cls, value, values):
+        val = values.get("value")
+        if isinstance(val, Image):
+            return "object"
+        elif isinstance(val, list):
+            return "list"
+        return "object"
 
     class Config:
         title = "Matches Visualization Image"
@@ -81,36 +107,26 @@ class OutputMatchesImage(Output):
 # ============================================================
 
 class GoodMatchesThreshold(Config):
-    name: Literal["GoodMatchesThreshold"] = "GoodMatchesThreshold"
-    value: int = 50
+    name: Literal["goodMatchesThreshold"] = "goodMatchesThreshold"
+    value: int = Field(default=50)
     type: Literal["number"] = "number"
     field: Literal["textInput"] = "textInput"
 
     class Config:
         title = "Good Matches Threshold"
-        json_schema_extra = {
-            "shortDescription": "Minimum good matches required"
-        }
 
 
 class RatioThreshold(Config):
-    name: Literal["RatioThreshold"] = "RatioThreshold"
-    value: float = 0.7
+    name: Literal["ratioThreshold"] = "ratioThreshold"
+    value: float = Field(default=0.7)
     type: Literal["number"] = "number"
     field: Literal["textInput"] = "textInput"
 
     class Config:
         title = "Ratio Threshold"
-        json_schema_extra = {
-            "shortDescription": "Lowe's ratio test threshold"
-        }
 
 
-# ============================================================
-# MATCHER OPTIONS
-# ============================================================
-
-class MatcherFlann(Config):
+class FlannBasedMatcher(Config):
     name: Literal["FlannBasedMatcher"] = "FlannBasedMatcher"
     value: Literal["FlannBasedMatcher"] = "FlannBasedMatcher"
     type: Literal["string"] = "string"
@@ -118,12 +134,9 @@ class MatcherFlann(Config):
 
     class Config:
         title = "FLANN Based Matcher"
-        json_schema_extra = {
-            "shortDescription": "FLANN nearest-neighbor matching"
-        }
 
 
-class MatcherBF(Config):
+class BFMatcher(Config):
     name: Literal["BFMatcher"] = "BFMatcher"
     value: Literal["BFMatcher"] = "BFMatcher"
     type: Literal["string"] = "string"
@@ -131,57 +144,48 @@ class MatcherBF(Config):
 
     class Config:
         title = "Brute Force Matcher"
-        json_schema_extra = {
-            "shortDescription": "Brute-force descriptor matching"
-        }
 
 
 class Matcher(Config):
-    name: Literal["Matcher"] = "Matcher"
-    value: Union[MatcherFlann, MatcherBF]
+    name: Literal["matcher"] = "matcher"
+    value: Union[FlannBasedMatcher, BFMatcher]
     type: Literal["object"] = "object"
     field: Literal["dropdownlist"] = "dropdownlist"
 
     class Config:
         title = "Matcher Algorithm"
         json_schema_extra = {
-            "shortDescription": "Select FLANN or Brute Force"
+            "target": {
+                "value": 0
+            }
         }
 
 
 # ============================================================
-# CONFIG MODEL
+# EXECUTOR INPUTS / CONFIGS / OUTPUTS
 # ============================================================
 
-class SiftComparisonTestConfigs(Configs):
-    GoodMatchesThreshold: GoodMatchesThreshold
-    RatioThreshold: RatioThreshold
-    Matcher: Matcher
+class SiftComparisonExecutorInputs(Inputs):
+    inputImageOne: Optional[InputImageOne] = None
+    inputImageTwo: Optional[InputImageTwo] = None
+    inputSIFTOutput1: Optional[InputSIFTOutput1] = None
+    inputSIFTOutput2: Optional[InputSIFTOutput2] = None
 
 
-# ============================================================
-# INPUT / OUTPUT CONTAINER MODELS
-# ============================================================
-
-class SiftComparisonTestInputs(Inputs):
-    InputImage1: Optional[InputImage1] = None
-    InputImage2: Optional[InputImage2] = None
-    InputSIFTOutput1: Optional[InputSIFTOutput1] = None
-    InputSIFTOutput2: Optional[InputSIFTOutput2] = None
+class SiftComparisonExecutorConfigs(Configs):
+    goodMatchesThreshold: GoodMatchesThreshold
+    ratioThreshold: RatioThreshold
+    matcher: Matcher
 
 
-class SiftComparisonTestOutputs(Outputs):
-    OutputDetections: OutputDetections
-    OutputMatchesImage: Optional[OutputMatchesImage] = None
+class SiftComparisonExecutorOutputs(Outputs):
+    outputDetections: OutputDetections
+    outputMatchesImage: Optional[OutputMatchesImage] = None
 
 
-# ============================================================
-# REQUEST & RESPONSE
-# ============================================================
-
-class SiftComparisonTestRequest(Request):
-    inputs: Optional[SiftComparisonTestInputs] = None
-    configs: SiftComparisonTestConfigs
+class SiftComparisonExecutorRequest(Request):
+    inputs: Optional[SiftComparisonExecutorInputs]
+    configs: SiftComparisonExecutorConfigs
 
     class Config:
         json_schema_extra = {
@@ -189,49 +193,38 @@ class SiftComparisonTestRequest(Request):
         }
 
 
-class SiftComparisonTestResponse(Response):
-    outputs: SiftComparisonTestOutputs
+class SiftComparisonExecutorResponse(Response):
+    outputs: SiftComparisonExecutorOutputs
 
 
 # ============================================================
-# EXECUTOR CONFIGURATION
+# EXECUTOR & ROOT PACKAGE
 # ============================================================
 
-class SiftComparisonTest(Config):
-    name: Literal["SiftComparisonTest"] = "SiftComparisonTest"
-    value: Union[
-        SiftComparisonTestRequest,
-        SiftComparisonTestResponse
-    ]
+class SiftComparisonExecutor(Config):
+    name: Literal["SiftComparisonExecutor"] = "SiftComparisonExecutor"
+    value: Union[SiftComparisonExecutorRequest, SiftComparisonExecutorResponse]
     type: Literal["object"] = "object"
     field: Literal["option"] = "option"
 
     class Config:
-        title = "SIFT Comparison"
+        title = "SIFT Comparison Executor"
         json_schema_extra = {
             "target": {
                 "value": 0
-            },
-            "shortDescription": "Feature-based image matching"
+            }
         }
 
 
 class ConfigExecutor(Config):
     name: Literal["ConfigExecutor"] = "ConfigExecutor"
-    value: Union[SiftComparisonTest]
+    value: Union[SiftComparisonExecutor]
     type: Literal["executor"] = "executor"
     field: Literal["dependentDropdownlist"] = "dependentDropdownlist"
 
     class Config:
         title = "Task"
-        json_schema_extra = {
-            "target": "value"
-        }
 
-
-# ============================================================
-# PACKAGE ROOT MODEL
-# ============================================================
 
 class PackageConfigs(Configs):
     executor: ConfigExecutor
@@ -239,6 +232,5 @@ class PackageConfigs(Configs):
 
 class PackageModel(Package):
     name: Literal["SiftComparisonTest"] = "SiftComparisonTest"
-    inputs: Optional[SiftComparisonTestInputs] = None
     configs: PackageConfigs
     type: Literal["component"] = "component"
