@@ -1,4 +1,5 @@
-from typing import Optional, Union, Literal, Any
+from pydantic import validator
+from typing import List, Union, Literal, Optional, Any
 
 from sdks.novavision.src.base.model import (
     Package,
@@ -20,24 +21,46 @@ from sdks.novavision.src.base.model import (
 
 class InputSIFTOutput1(Input):
     name: Literal["InputSIFTOutput1"] = "InputSIFTOutput1"
-    value: Optional[Image]
-    type: Literal["object"] = "object"
+    value: Union[List[Image], Image]
+    type: str = "object"
+
+    @validator("type", pre=True, always=True)
+    def set_type_based_on_value(cls, value, values):
+        value = values.get("value")
+
+        if isinstance(value, Image):
+            return "object"
+        elif isinstance(value, list):
+            return "list"
+
+        return "object"
 
     class Config:
-        title = "Image 1"
+        title = "Image Input 1"
 
 
 class InputSIFTOutput2(Input):
     name: Literal["InputSIFTOutput2"] = "InputSIFTOutput2"
-    value: Optional[Image]
-    type: Literal["object"] = "object"
+    value: Union[List[Image], Image]
+    type: str = "object"
+
+    @validator("type", pre=True, always=True)
+    def set_type_based_on_value(cls, value, values):
+        value = values.get("value")
+
+        if isinstance(value, Image):
+            return "object"
+        elif isinstance(value, list):
+            return "list"
+
+        return "object"
 
     class Config:
-        title = "Image 2"
+        title = "Image Input 2"
 
 
 # ============================================================
-# OUTPUTS
+# OUTPUT
 # ============================================================
 
 class OutputDetections(Output):
@@ -152,7 +175,6 @@ class SiftComparisonTestResponse(Response):
 # ============================================================
 
 class SiftComparisonTest(Config):
-
     name: Literal["SiftComparisonTest"] = "SiftComparisonTest"
 
     value: Union[
@@ -175,7 +197,6 @@ class SiftComparisonTest(Config):
 
 
 class ConfigExecutor(Config):
-
     name: Literal["ConfigExecutor"] = "ConfigExecutor"
 
     value: Union[SiftComparisonTest]
@@ -186,14 +207,6 @@ class ConfigExecutor(Config):
     class Config:
         title = "Task"
 
-        json_schema_extra = {
-            "target": "value"
-        }
-
-
-# ============================================================
-# PACKAGE CONFIG
-# ============================================================
 
 class PackageConfigs(Configs):
     executor: ConfigExecutor
@@ -204,9 +217,8 @@ class PackageConfigs(Configs):
 # ============================================================
 
 class PackageModel(Package):
-
-    name: Literal["SiftComparisonTest"] = "SiftComparisonTest"
-
     configs: PackageConfigs
 
     type: Literal["component"] = "component"
+
+    name: Literal["SiftComparisonTest"] = "SiftComparisonTest"
