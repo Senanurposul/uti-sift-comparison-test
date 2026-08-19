@@ -70,7 +70,6 @@ class SiftComparisonTest(Component):
             "InputSIFTOutput2"
         )
 
-        # Görseller (Test sırasında SIFT hesaplamak ve görselleştirmek için)
         self.image_1 = self.request.get_param("InputImage1")
         self.image_2 = self.request.get_param("InputImage2")
 
@@ -85,18 +84,13 @@ class SiftComparisonTest(Component):
         return {}
 
     # ========================================================
-    # GEÇİCİ SIFT HESAPLAMA (TEST FALLBACK)
+    # SIFT FALLBACK (TEST FOR IMAGES DIRECTLY)
     # ========================================================
 
     def _compute_sift_fallback(self, image_input):
-        """
-        Dışarıdan SIFT verisi gelmediğinde görselden SIFT hesaplar.
-        SIFT paketi hazır olunca bu fonksiyon silinecek.
-        """
         if not image_input:
             return [], np.empty((0, 128), dtype=np.float32)
 
-        # NovaVision Image nesnesinden numpy array alımı
         img_np = image_input.get_image() if hasattr(image_input, 'get_image') else image_input
 
         if len(img_np.shape) == 3:
@@ -207,7 +201,6 @@ class SiftComparisonTest(Component):
 
     def run(self):
         try:
-            # 1. SIFT verisi varsa parse et, yoksa görsellerden kendin hesapla (Test Mode)
             if self.sift_output_1:
                 keypoints1_dicts, descriptors1 = self._extract_keypoints_and_descriptors(self.sift_output_1)
             else:
@@ -218,12 +211,10 @@ class SiftComparisonTest(Component):
             else:
                 keypoints2_dicts, descriptors2 = self._compute_sift_fallback(self.image_2)
 
-            # 2. Yeterli descriptor yoksa direkt dön
             if len(descriptors1) < 2 or len(descriptors2) < 2:
                 self.output_detections = self._no_match_result()
                 return build_response_sift_comparison_test(context=self)
 
-            # 3. Matcher seçimi
             if self.matcher == "FlannBasedMatcher":
                 index_params = {"algorithm": 1, "trees": 5}
                 search_params = {"checks": 50}
@@ -233,7 +224,6 @@ class SiftComparisonTest(Component):
             else:
                 raise ValueError(f"Unsupported matcher: {self.matcher}")
 
-            # 4. Matching & Lowe's Ratio Test
             matches = matcher.knnMatch(descriptors1, descriptors2, k=2)
 
             good_matches = []
@@ -247,7 +237,6 @@ class SiftComparisonTest(Component):
             good_matches_count = len(good_matches)
             images_match = good_matches_count >= self.good_matches_threshold
 
-            # 5. Metadata Çıktıları (Dashboard Çizgileri)
             all_keypoints_dicts = keypoints1_dicts + keypoints2_dicts
             offset = len(keypoints1_dicts)
 
@@ -280,7 +269,6 @@ class SiftComparisonTest(Component):
                 )
             ]
 
-            # 6. Yan yana çizilmiş sonuç görseli
             if self.image_1 and self.image_2:
                 self.output_matches_image = self._create_matches_visualization(
                     keypoints1_dicts,

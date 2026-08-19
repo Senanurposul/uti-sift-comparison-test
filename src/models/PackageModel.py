@@ -160,14 +160,14 @@ class SiftComparisonTestConfigs(Configs):
 
 
 # ============================================================
-# INPUT / OUTPUT MODELS
+# INPUT / OUTPUT CONTAINER MODELS
 # ============================================================
 
 class SiftComparisonTestInputs(Inputs):
-    InputSIFTOutput1: Optional[InputSIFTOutput1] = None
-    InputSIFTOutput2: Optional[InputSIFTOutput2] = None
     InputImage1: Optional[InputImage1] = None
     InputImage2: Optional[InputImage2] = None
+    InputSIFTOutput1: Optional[InputSIFTOutput1] = None
+    InputSIFTOutput2: Optional[InputSIFTOutput2] = None
 
 
 class SiftComparisonTestOutputs(Outputs):
@@ -176,7 +176,7 @@ class SiftComparisonTestOutputs(Outputs):
 
 
 # ============================================================
-# REQUEST
+# REQUEST & RESPONSE
 # ============================================================
 
 class SiftComparisonTestRequest(Request):
@@ -188,10 +188,6 @@ class SiftComparisonTestRequest(Request):
             "target": "configs"
         }
 
-
-# ============================================================
-# RESPONSE
-# ============================================================
 
 class SiftComparisonTestResponse(Response):
     outputs: SiftComparisonTestOutputs
@@ -234,18 +230,15 @@ class ConfigExecutor(Config):
 
 
 # ============================================================
-# PACKAGE CONFIG
+# PACKAGE ROOT MODEL
 # ============================================================
 
 class PackageConfigs(Configs):
     executor: ConfigExecutor
 
 
-# ============================================================
-# PACKAGE MODEL
-# ============================================================
-
 class PackageModel(Package):
     name: Literal["SiftComparisonTest"] = "SiftComparisonTest"
+    inputs: Optional[SiftComparisonTestInputs] = None
     configs: PackageConfigs
     type: Literal["component"] = "component"

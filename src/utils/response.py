@@ -21,7 +21,6 @@ def build_response_sift_comparison_test(context):
         "OutputDetections": output_detections
     }
 
-    # Görselleştirme çıktısı varsa yanıta dahil et
     if hasattr(context, "output_matches_image") and context.output_matches_image is not None:
         outputs_dict["OutputMatchesImage"] = OutputMatchesImage(
             value=context.output_matches_image
