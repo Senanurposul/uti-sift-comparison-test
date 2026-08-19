@@ -28,10 +28,6 @@ from components.SiftComparisonTest.src.models.PackageModel import (
 )
 
 
-# ============================================================
-# SIFT COMPARISON COMPONENT
-# ============================================================
-
 class SiftComparisonTest(Component):
 
     def __init__(self, request, bootstrap):
@@ -41,37 +37,30 @@ class SiftComparisonTest(Component):
             bootstrap
         )
 
-        # Request'i PackageModel ile doğruluyoruz.
         self.request.model = PackageModel(
             **self.request.data
         )
 
-        # Minimum good match sayısı.
         self.good_matches_threshold = self.request.get_param(
             "GoodMatchesThreshold"
         )
 
-        # Lowe Ratio Test threshold.
         self.ratio_threshold = self.request.get_param(
             "RatioThreshold"
         )
 
-        # Matcher seçimi.
         self.matcher = self.request.get_param(
             "Matcher"
         )
 
-        # Visualization aktif mi?
         self.visualize = self.request.get_param(
             "Visualize"
         )
 
-        # Birinci input.
         self.sift_output_1 = self.request.get_param(
             "InputSIFTOutput1"
         )
 
-        # İkinci input.
         self.sift_output_2 = self.request.get_param(
             "InputSIFTOutput2"
         )
@@ -94,40 +83,29 @@ class SiftComparisonTest(Component):
     def _get_image(self, image):
 
         if image is None:
-
             raise ValueError(
                 "Image input is None."
             )
 
-        # Liste geldiyse ilk image
         if isinstance(image, list):
 
             if len(image) == 0:
-
                 raise ValueError(
                     "Image input list is empty."
                 )
 
             image = image[0]
 
-        # Direkt numpy array
         if isinstance(image, np.ndarray):
-
             return image
 
-        # Image nesnesinin value alanı varsa
         if hasattr(image, "value"):
 
             image = image.value
 
-            if isinstance(
-                image,
-                np.ndarray
-            ):
-
+            if isinstance(image, np.ndarray):
                 return image
 
-        # bytes geldiyse decode et
         if isinstance(image, bytes):
 
             image_array = np.frombuffer(
@@ -141,7 +119,6 @@ class SiftComparisonTest(Component):
             )
 
             if decoded is None:
-
                 raise ValueError(
                     "Image could not be decoded."
                 )
@@ -183,27 +160,6 @@ class SiftComparisonTest(Component):
             )
 
         return keypoints, descriptors
-
-
-    # ========================================================
-    # NO MATCH RESULT
-    # ========================================================
-
-    def _no_match_result(self):
-
-        return [
-
-            Detection(
-                boundingBox=None,
-                keyPoints=[],
-                connections=[],
-                confidence=0.0,
-                classId=0,
-                classLabel="NoMatch",
-                imgUID=self.uID
-            )
-
-        ]
 
 
     # ========================================================
@@ -277,7 +233,7 @@ class SiftComparisonTest(Component):
         try:
 
             # ------------------------------------------------
-            # 1. IMAGE INPUTLARINI ALIYORUZ
+            # 1. IMAGE INPUT
             # ------------------------------------------------
 
             image_1 = self._get_image(
@@ -318,7 +274,7 @@ class SiftComparisonTest(Component):
 
 
             # ------------------------------------------------
-            # 3. SIFT HESAPLIYORUZ
+            # 3. SIFT
             # ------------------------------------------------
 
             keypoints1, descriptors1 = (
@@ -334,42 +290,19 @@ class SiftComparisonTest(Component):
             )
 
 
-            print("")
-            print("========================================")
-            print("       SIFT COMPARISON DEBUG")
-            print("========================================")
-
             print(
-                "GoodMatchesThreshold:",
-                self.good_matches_threshold
-            )
-
-            print(
-                "RatioThreshold:",
-                self.ratio_threshold
-            )
-
-            print(
-                "Matcher:",
-                self.matcher
-            )
-
-            print(
-                "Keypoints1:",
+                "Keypoints 1:",
                 len(keypoints1)
             )
 
             print(
-                "Keypoints2:",
+                "Keypoints 2:",
                 len(keypoints2)
             )
 
-            print("========================================")
-            print("")
-
 
             # ------------------------------------------------
-            # 4. MATCHER
+            # 4. MATCHING
             # ------------------------------------------------
 
             good_matches = []
@@ -395,7 +328,6 @@ class SiftComparisonTest(Component):
                 for match_pair in matches:
 
                     if len(match_pair) < 2:
-
                         continue
 
                     m, n = match_pair
@@ -417,13 +349,13 @@ class SiftComparisonTest(Component):
             )
 
             print(
-                "Good matches count:",
+                "Good matches:",
                 good_matches_count
             )
 
 
             # ------------------------------------------------
-            # 7. MATCH / NOMATCH
+            # 7. MATCH / NO MATCH
             # ------------------------------------------------
 
             images_match = (
@@ -474,7 +406,7 @@ class SiftComparisonTest(Component):
 
 
             # ------------------------------------------------
-            # 10. FINAL DETECTION
+            # 10. OUTPUT DETECTIONS
             # ------------------------------------------------
 
             self.output_detections = [

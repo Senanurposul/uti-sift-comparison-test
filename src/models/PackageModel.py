@@ -1,4 +1,4 @@
-from typing import Optional, Union, Literal, Any
+from typing import Optional, Union, Literal, Any, List
 
 from sdks.novavision.src.base.model import (
     Package,
@@ -20,20 +20,20 @@ from sdks.novavision.src.base.model import (
 
 class InputSIFTOutput1(Input):
     name: Literal["InputSIFTOutput1"] = "InputSIFTOutput1"
-    value: Optional[Any]
+    value: Optional[Union[Image, List[Image]]]
     type: Literal["object"] = "object"
 
     class Config:
-        title = "SIFT Output 1"
+        title = "Image 1"
 
 
 class InputSIFTOutput2(Input):
     name: Literal["InputSIFTOutput2"] = "InputSIFTOutput2"
-    value: Optional[Any]
+    value: Optional[Union[Image, List[Image]]]
     type: Literal["object"] = "object"
 
     class Config:
-        title = "SIFT Output 2"
+        title = "Image 2"
 
 
 # ============================================================
@@ -51,7 +51,7 @@ class OutputDetections(Output):
 
 class OutputVisualization(Output):
     name: Literal["OutputVisualization"] = "OutputVisualization"
-    value: Optional[Any]
+    value: Optional[Image]
     type: Literal["object"] = "object"
 
     class Config:
@@ -127,17 +127,15 @@ class MatcherBF(Config):
 
 class Matcher(Config):
     name: Literal["Matcher"] = "Matcher"
-
-    value: Union[
-        MatcherFlann,
-        MatcherBF
-    ]
-
+    value: Union[MatcherFlann, MatcherBF]
     type: Literal["object"] = "object"
     field: Literal["dropdownlist"] = "dropdownlist"
 
     class Config:
         title = "Matcher Algorithm"
+        json_schema_extra = {
+            "shortDescription": "FLANN or Brute Force"
+        }
 
 
 # ============================================================
@@ -219,15 +217,12 @@ class SiftComparisonTest(Config):
 
 class ConfigExecutor(Config):
     name: Literal["ConfigExecutor"] = "ConfigExecutor"
-
-    value: Union[SiftComparisonTest]
-
+    value: SiftComparisonTest
     type: Literal["executor"] = "executor"
     field: Literal["dependentDropdownlist"] = "dependentDropdownlist"
 
     class Config:
         title = "Task"
-
         json_schema_extra = {
             "target": "value"
         }
