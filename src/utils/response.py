@@ -8,50 +8,45 @@ from components.SiftComparisonTest.src.models.PackageModel import (
     SiftComparisonTestResponse,
     SiftComparisonTestOutputs,
     OutputDetections,
-    OutputVisualization,
+    OutputMatchesImage
 )
 
 
 def build_response_sift_comparison_test(context):
-
-    # Detection output
-    outputDetections = OutputDetections(
+    output_detections = OutputDetections(
         value=context.output_detections
     )
 
-    # Visualization output
-    # Visualization henüz oluşturulmamışsa None döndürür.
-    outputVisualization = OutputVisualization(
-        value=getattr(context, "output_visualization", None)
-    )
+    outputs_dict = {
+        "OutputDetections": output_detections
+    }
 
-    # Outputs
+    # Görselleştirme çıktısı varsa yanıta dahil et
+    if hasattr(context, "output_matches_image") and context.output_matches_image is not None:
+        outputs_dict["OutputMatchesImage"] = OutputMatchesImage(
+            value=context.output_matches_image
+        )
+
     outputs = SiftComparisonTestOutputs(
-        OutputDetections=outputDetections,
-        OutputVisualization=outputVisualization
+        **outputs_dict
     )
 
-    # Response
     response = SiftComparisonTestResponse(
         outputs=outputs
     )
 
-    # Executor
     executor = SiftComparisonTest(
         value=response
     )
 
-    # Config Executor
     configExecutor = ConfigExecutor(
         value=executor
     )
 
-    # Package Config
     packageConfigs = PackageConfigs(
         executor=configExecutor
     )
 
-    # Package
     package = PackageHelper(
         packageModel=PackageModel,
         packageConfigs=packageConfigs

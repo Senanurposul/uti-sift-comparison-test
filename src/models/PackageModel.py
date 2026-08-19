@@ -2,6 +2,7 @@ from typing import Optional, Union, Literal, Any
 
 from sdks.novavision.src.base.model import (
     Package,
+    Image,
     Inputs,
     Outputs,
     Configs,
@@ -19,7 +20,7 @@ from sdks.novavision.src.base.model import (
 
 class InputSIFTOutput1(Input):
     name: Literal["InputSIFTOutput1"] = "InputSIFTOutput1"
-    value: Optional[Any]
+    value: Optional[Any] = None
     type: Literal["object"] = "object"
 
     class Config:
@@ -28,11 +29,29 @@ class InputSIFTOutput1(Input):
 
 class InputSIFTOutput2(Input):
     name: Literal["InputSIFTOutput2"] = "InputSIFTOutput2"
-    value: Optional[Any]
+    value: Optional[Any] = None
     type: Literal["object"] = "object"
 
     class Config:
         title = "SIFT Output 2"
+
+
+class InputImage1(Input):
+    name: Literal["InputImage1"] = "InputImage1"
+    value: Optional[Image] = None
+    type: Literal["image"] = "image"
+
+    class Config:
+        title = "Image 1"
+
+
+class InputImage2(Input):
+    name: Literal["InputImage2"] = "InputImage2"
+    value: Optional[Image] = None
+    type: Literal["image"] = "image"
+
+    class Config:
+        title = "Image 2"
 
 
 # ============================================================
@@ -41,20 +60,20 @@ class InputSIFTOutput2(Input):
 
 class OutputDetections(Output):
     name: Literal["OutputDetections"] = "OutputDetections"
-    value: Optional[Any]
+    value: Optional[Any] = None
     type: Literal["list"] = "list"
 
     class Config:
         title = "Output Detections"
 
 
-class OutputVisualization(Output):
-    name: Literal["OutputVisualization"] = "OutputVisualization"
-    value: Optional[Any]
-    type: Literal["object"] = "object"
+class OutputMatchesImage(Output):
+    name: Literal["OutputMatchesImage"] = "OutputMatchesImage"
+    value: Optional[Image] = None
+    type: Literal["image"] = "image"
 
     class Config:
-        title = "Visualization"
+        title = "Matches Visualization Image"
 
 
 # ============================================================
@@ -87,19 +106,6 @@ class RatioThreshold(Config):
         }
 
 
-class Visualize(Config):
-    name: Literal["Visualize"] = "Visualize"
-    value: bool = True
-    type: Literal["bool"] = "bool"
-    field: Literal["option"] = "option"
-
-    class Config:
-        title = "Visualize"
-        json_schema_extra = {
-            "shortDescription": "Generate SIFT keypoint visualization"
-        }
-
-
 # ============================================================
 # MATCHER OPTIONS
 # ============================================================
@@ -112,6 +118,9 @@ class MatcherFlann(Config):
 
     class Config:
         title = "FLANN Based Matcher"
+        json_schema_extra = {
+            "shortDescription": "FLANN nearest-neighbor matching"
+        }
 
 
 class MatcherBF(Config):
@@ -122,21 +131,22 @@ class MatcherBF(Config):
 
     class Config:
         title = "Brute Force Matcher"
+        json_schema_extra = {
+            "shortDescription": "Brute-force descriptor matching"
+        }
 
 
 class Matcher(Config):
     name: Literal["Matcher"] = "Matcher"
-
-    value: Union[
-        MatcherFlann,
-        MatcherBF
-    ]
-
+    value: Union[MatcherFlann, MatcherBF]
     type: Literal["object"] = "object"
     field: Literal["dropdownlist"] = "dropdownlist"
 
     class Config:
         title = "Matcher Algorithm"
+        json_schema_extra = {
+            "shortDescription": "Select FLANN or Brute Force"
+        }
 
 
 # ============================================================
@@ -147,25 +157,22 @@ class SiftComparisonTestConfigs(Configs):
     GoodMatchesThreshold: GoodMatchesThreshold
     RatioThreshold: RatioThreshold
     Matcher: Matcher
-    Visualize: Visualize
 
 
 # ============================================================
-# INPUT MODEL
+# INPUT / OUTPUT MODELS
 # ============================================================
 
 class SiftComparisonTestInputs(Inputs):
-    InputSIFTOutput1: InputSIFTOutput1
-    InputSIFTOutput2: InputSIFTOutput2
+    InputSIFTOutput1: Optional[InputSIFTOutput1] = None
+    InputSIFTOutput2: Optional[InputSIFTOutput2] = None
+    InputImage1: Optional[InputImage1] = None
+    InputImage2: Optional[InputImage2] = None
 
-
-# ============================================================
-# OUTPUT MODEL
-# ============================================================
 
 class SiftComparisonTestOutputs(Outputs):
     OutputDetections: OutputDetections
-    OutputVisualization: OutputVisualization
+    OutputMatchesImage: Optional[OutputMatchesImage] = None
 
 
 # ============================================================
@@ -173,7 +180,7 @@ class SiftComparisonTestOutputs(Outputs):
 # ============================================================
 
 class SiftComparisonTestRequest(Request):
-    inputs: Optional[SiftComparisonTestInputs]
+    inputs: Optional[SiftComparisonTestInputs] = None
     configs: SiftComparisonTestConfigs
 
     class Config:
@@ -191,17 +198,15 @@ class SiftComparisonTestResponse(Response):
 
 
 # ============================================================
-# EXECUTOR
+# EXECUTOR CONFIGURATION
 # ============================================================
 
 class SiftComparisonTest(Config):
     name: Literal["SiftComparisonTest"] = "SiftComparisonTest"
-
     value: Union[
         SiftComparisonTestRequest,
         SiftComparisonTestResponse
     ]
-
     type: Literal["object"] = "object"
     field: Literal["option"] = "option"
 
@@ -217,9 +222,7 @@ class SiftComparisonTest(Config):
 
 class ConfigExecutor(Config):
     name: Literal["ConfigExecutor"] = "ConfigExecutor"
-
     value: Union[SiftComparisonTest]
-
     type: Literal["executor"] = "executor"
     field: Literal["dependentDropdownlist"] = "dependentDropdownlist"
 
