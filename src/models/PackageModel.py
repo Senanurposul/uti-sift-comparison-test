@@ -1,4 +1,4 @@
-from typing import Optional, Union, Literal, Any, List
+from typing import Optional, Union, Literal, Any
 
 from sdks.novavision.src.base.model import (
     Package,
@@ -20,7 +20,7 @@ from sdks.novavision.src.base.model import (
 
 class InputSIFTOutput1(Input):
     name: Literal["InputSIFTOutput1"] = "InputSIFTOutput1"
-    value: Optional[Union[Image, List[Image]]]
+    value: Optional[Image]
     type: Literal["object"] = "object"
 
     class Config:
@@ -29,7 +29,7 @@ class InputSIFTOutput1(Input):
 
 class InputSIFTOutput2(Input):
     name: Literal["InputSIFTOutput2"] = "InputSIFTOutput2"
-    value: Optional[Union[Image, List[Image]]]
+    value: Optional[Image]
     type: Literal["object"] = "object"
 
     class Config:
@@ -37,7 +37,7 @@ class InputSIFTOutput2(Input):
 
 
 # ============================================================
-# OUTPUTS
+# OUTPUT
 # ============================================================
 
 class OutputDetections(Output):
@@ -47,15 +47,6 @@ class OutputDetections(Output):
 
     class Config:
         title = "Output Detections"
-
-
-class OutputVisualization(Output):
-    name: Literal["OutputVisualization"] = "OutputVisualization"
-    value: Optional[Image]
-    type: Literal["object"] = "object"
-
-    class Config:
-        title = "Visualization"
 
 
 # ============================================================
@@ -88,23 +79,6 @@ class RatioThreshold(Config):
         }
 
 
-class Visualize(Config):
-    name: Literal["Visualize"] = "Visualize"
-    value: bool = True
-    type: Literal["bool"] = "bool"
-    field: Literal["option"] = "option"
-
-    class Config:
-        title = "Visualize"
-        json_schema_extra = {
-            "shortDescription": "Generate SIFT visualization"
-        }
-
-
-# ============================================================
-# MATCHER OPTIONS
-# ============================================================
-
 class MatcherFlann(Config):
     name: Literal["FlannBasedMatcher"] = "FlannBasedMatcher"
     value: Literal["FlannBasedMatcher"] = "FlannBasedMatcher"
@@ -133,24 +107,16 @@ class Matcher(Config):
 
     class Config:
         title = "Matcher Algorithm"
-        json_schema_extra = {
-            "shortDescription": "FLANN or Brute Force"
-        }
 
-
-# ============================================================
-# CONFIG MODEL
-# ============================================================
 
 class SiftComparisonTestConfigs(Configs):
     GoodMatchesThreshold: GoodMatchesThreshold
     RatioThreshold: RatioThreshold
     Matcher: Matcher
-    Visualize: Visualize
 
 
 # ============================================================
-# INPUT MODEL
+# INPUT / OUTPUT MODELS
 # ============================================================
 
 class SiftComparisonTestInputs(Inputs):
@@ -158,18 +124,9 @@ class SiftComparisonTestInputs(Inputs):
     InputSIFTOutput2: InputSIFTOutput2
 
 
-# ============================================================
-# OUTPUT MODEL
-# ============================================================
-
 class SiftComparisonTestOutputs(Outputs):
     OutputDetections: OutputDetections
-    OutputVisualization: OutputVisualization
 
-
-# ============================================================
-# REQUEST
-# ============================================================
 
 class SiftComparisonTestRequest(Request):
     inputs: Optional[SiftComparisonTestInputs]
@@ -181,16 +138,12 @@ class SiftComparisonTestRequest(Request):
         }
 
 
-# ============================================================
-# RESPONSE
-# ============================================================
-
 class SiftComparisonTestResponse(Response):
     outputs: SiftComparisonTestOutputs
 
 
 # ============================================================
-# EXECUTOR
+# EXECUTOR CONFIGURATION
 # ============================================================
 
 class SiftComparisonTest(Config):
@@ -205,19 +158,16 @@ class SiftComparisonTest(Config):
     field: Literal["option"] = "option"
 
     class Config:
-        title = "SIFT Comparison"
-
+        title = "SIFT Comparison Test"
         json_schema_extra = {
-            "target": {
-                "value": 0
-            },
-            "shortDescription": "Feature-based image matching"
+            "target": {"value": 0},
+            "shortDescription": "SIFT feature extraction and comparison"
         }
 
 
 class ConfigExecutor(Config):
     name: Literal["ConfigExecutor"] = "ConfigExecutor"
-    value: SiftComparisonTest
+    value: Union[SiftComparisonTest]
     type: Literal["executor"] = "executor"
     field: Literal["dependentDropdownlist"] = "dependentDropdownlist"
 
@@ -227,10 +177,6 @@ class ConfigExecutor(Config):
             "target": "value"
         }
 
-
-# ============================================================
-# PACKAGE CONFIG
-# ============================================================
 
 class PackageConfigs(Configs):
     executor: ConfigExecutor

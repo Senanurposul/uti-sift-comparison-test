@@ -1,351 +1,306 @@
-import os
-import sys
 import cv2
 import numpy as np
 
-sys.path.append(
-    os.path.join(
-        os.path.dirname(__file__),
-        '../../../../'
-    )
-)
-
 from sdks.novavision.src.base.component import Component
-from sdks.novavision.src.base.model import (
-    KeyPoints,
-    Detection,
-    Connection
-)
-
-from sdks.novavision.src.helper.executor import Executor
-
-from components.SiftComparisonTest.src.utils.response import (
-    build_response_sift_comparison_test
-)
-
-from components.SiftComparisonTest.src.models.PackageModel import (
-    PackageModel
-)
 
 
-class SiftComparisonTest(Component):
+class SiftComparisonTestExecutor(Component):
 
-    def __init__(self, request, bootstrap):
+    def __init__(self, context):
+        super().__init__(context)
 
-        super().__init__(
-            request,
-            bootstrap
-        )
-
-        self.request.model = PackageModel(
-            **self.request.data
-        )
-
-        self.good_matches_threshold = self.request.get_param(
-            "GoodMatchesThreshold"
-        )
-
-        self.ratio_threshold = self.request.get_param(
-            "RatioThreshold"
-        )
-
-        self.matcher = self.request.get_param(
-            "Matcher"
-        )
-
-        self.visualize = self.request.get_param(
-            "Visualize"
-        )
-
-        self.sift_output_1 = self.request.get_param(
-            "InputSIFTOutput1"
-        )
-
-        self.sift_output_2 = self.request.get_param(
-            "InputSIFTOutput2"
-        )
-
-
-    # ========================================================
-    # BOOTSTRAP
-    # ========================================================
-
-    @staticmethod
-    def bootstrap(config: dict) -> dict:
-
-        return {}
-
-
-    # ========================================================
-    # IMAGE CONVERSION
-    # ========================================================
-
-    def _get_image(self, image):
+    def _image_to_numpy(self, image):
+        """
+        NovaVision Image objesini numpy array'e çevirir.
+        """
 
         if image is None:
-            raise ValueError(
-                "Image input is None."
-            )
+            raise ValueError("Image input is None.")
 
-        if isinstance(image, list):
-
-            if len(image) == 0:
-                raise ValueError(
-                    "Image input list is empty."
-                )
-
-            image = image[0]
-
+        # numpy array olarak geldiyse
         if isinstance(image, np.ndarray):
             return image
 
-        if hasattr(image, "value"):
-
-            image = image.value
-
-            if isinstance(image, np.ndarray):
-                return image
-
+        # bytes olarak geldiyse
         if isinstance(image, bytes):
-
-            image_array = np.frombuffer(
-                image,
-                dtype=np.uint8
-            )
-
-            decoded = cv2.imdecode(
-                image_array,
-                cv2.IMREAD_COLOR
-            )
+            array = np.frombuffer(image, dtype=np.uint8)
+            decoded = cv2.imdecode(array, cv2.IMREAD_COLOR)
 
             if decoded is None:
-                raise ValueError(
-                    "Image could not be decoded."
-                )
+                raise ValueError("Image bytes could not be decoded.")
 
             return decoded
+
+        # Image objesinin value/data gibi alanlarını kontrol et
+        for attribute in ["value", "data", "image", "array"]:
+
+            if hasattr(image, attribute):
+
+                value = getattr(image, attribute)
+
+                if isinstance(value, np.ndarray):
+                    return value
+
+                if isinstance(value, bytes):
+                    array = np.frombuffer(
+                        value,
+                        dtype=np.uint8
+                    )
+
+                    decoded = cv2.imdecode(
+                        array,
+                        cv2.IMREAD_COLOR
+                    )
+
+                    if decoded is not None:
+                        return decoded
 
         raise TypeError(
             f"Unsupported image type: {type(image)}"
         )
 
+    def _keypoints_to_list(self, keypoints):
 
-    # ========================================================
-    # SIFT
-    # ========================================================
+        result = []
 
-    def _calculate_sift(self, image):
+        for kp in keypoints:
 
-        sift = cv2.SIFT_create()
+            result.append({
+                "cx": float(kp.pt[0]),
+                "cy": float(kp.pt[1]),
+                "size": float(kp.size),
+                "angle": float(kp.angle),
+                "response": float(kp.response),
+                "octave": int(kp.octave)
+            })
 
-        keypoints, descriptors = (
-            sift.detectAndCompute(
-                image,
-                None
-            )
-        )
+        return result
+
+    def _descriptors_to_list(self, descriptors):
 
         if descriptors is None:
+            return []
 
-            descriptors = np.empty(
-                (0, 128),
-                dtype=np.float32
-            )
+        return descriptors.astype(
+            np.float32
+        ).tolist()
 
-        else:
+    def _create_matcher(self, matcher_name):
 
-            descriptors = np.asarray(
-                descriptors,
-                dtype=np.float32
-            )
-
-        return keypoints, descriptors
-
-
-    # ========================================================
-    # MATCHER
-    # ========================================================
-
-    def _create_matcher(self):
-
-        if self.matcher == "FlannBasedMatcher":
-
-            index_params = {
-                "algorithm": 1,
-                "trees": 5
-            }
-
-            search_params = {
-                "checks": 50
-            }
-
-            return cv2.FlannBasedMatcher(
-                index_params,
-                search_params
-            )
-
-        elif self.matcher == "BFMatcher":
+        if matcher_name == "BFMatcher":
 
             return cv2.BFMatcher(
                 cv2.NORM_L2,
                 crossCheck=False
             )
 
-        else:
+        # Default = FLANN
+        index_params = {
+            "algorithm": 1,
+            "trees": 5
+        }
 
-            raise ValueError(
-                f"Unsupported matcher: {self.matcher}"
-            )
+        search_params = {
+            "checks": 50
+        }
 
-
-    # ========================================================
-    # VISUALIZATION
-    # ========================================================
-
-    def _build_visualization(
-        self,
-        image_1,
-        image_2,
-        keypoints_1,
-        keypoints_2,
-        good_matches
-    ):
-
-        canvas = cv2.drawMatches(
-            image_1,
-            keypoints_1,
-            image_2,
-            keypoints_2,
-            good_matches,
-            None,
-            flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS
+        return cv2.FlannBasedMatcher(
+            index_params,
+            search_params
         )
-
-        return canvas
-
-
-    # ========================================================
-    # RUN
-    # ========================================================
 
     def run(self):
 
         try:
 
             # ------------------------------------------------
-            # 1. IMAGE INPUT
+            # INPUTS
             # ------------------------------------------------
 
-            image_1 = self._get_image(
-                self.sift_output_1
-            )
+            input_1 = self.context.inputs.InputSIFTOutput1.value
+            input_2 = self.context.inputs.InputSIFTOutput2.value
 
-            image_2 = self._get_image(
-                self.sift_output_2
-            )
+            if input_1 is None:
+                raise ValueError(
+                    "InputSIFTOutput1 is empty."
+                )
 
+            if input_2 is None:
+                raise ValueError(
+                    "InputSIFTOutput2 is empty."
+                )
+
+            print(
+                "SIFT Comparison - received two images."
+            )
 
             # ------------------------------------------------
-            # 2. GRAYSCALE
+            # IMAGE -> NUMPY
+            # ------------------------------------------------
+
+            image_1 = self._image_to_numpy(
+                input_1
+            )
+
+            image_2 = self._image_to_numpy(
+                input_2
+            )
+
+            print(
+                "Image 1 shape:",
+                image_1.shape
+            )
+
+            print(
+                "Image 2 shape:",
+                image_2.shape
+            )
+
+            # ------------------------------------------------
+            # GRAYSCALE
             # ------------------------------------------------
 
             if len(image_1.shape) == 3:
-
                 gray_1 = cv2.cvtColor(
                     image_1,
                     cv2.COLOR_BGR2GRAY
                 )
-
             else:
-
                 gray_1 = image_1
 
-
             if len(image_2.shape) == 3:
-
                 gray_2 = cv2.cvtColor(
                     image_2,
                     cv2.COLOR_BGR2GRAY
                 )
-
             else:
-
                 gray_2 = image_2
 
-
             # ------------------------------------------------
-            # 3. SIFT
+            # SIFT
             # ------------------------------------------------
 
-            keypoints1, descriptors1 = (
-                self._calculate_sift(
-                    gray_1
+            sift = cv2.SIFT_create()
+
+            keypoints_1, descriptors_1 = (
+                sift.detectAndCompute(
+                    gray_1,
+                    None
                 )
             )
 
-            keypoints2, descriptors2 = (
-                self._calculate_sift(
-                    gray_2
+            keypoints_2, descriptors_2 = (
+                sift.detectAndCompute(
+                    gray_2,
+                    None
                 )
             )
-
 
             print(
                 "Keypoints 1:",
-                len(keypoints1)
+                len(keypoints_1)
             )
 
             print(
                 "Keypoints 2:",
-                len(keypoints2)
+                len(keypoints_2)
             )
 
+            # ------------------------------------------------
+            # DESCRIPTOR CHECK
+            # ------------------------------------------------
+
+            if descriptors_1 is None:
+                descriptors_1 = np.empty(
+                    (0, 128),
+                    dtype=np.float32
+                )
+
+            if descriptors_2 is None:
+                descriptors_2 = np.empty(
+                    (0, 128),
+                    dtype=np.float32
+                )
 
             # ------------------------------------------------
-            # 4. MATCHING
+            # CONFIG
+            # ------------------------------------------------
+
+            configs = self.context.configs
+
+            good_matches_threshold = (
+                configs.GoodMatchesThreshold.value
+            )
+
+            ratio_threshold = (
+                configs.RatioThreshold.value
+            )
+
+            matcher_config = configs.Matcher.value
+
+            matcher_name = matcher_config.name
+
+            print(
+                "Matcher:",
+                matcher_name
+            )
+
+            print(
+                "Ratio threshold:",
+                ratio_threshold
+            )
+
+            print(
+                "Good matches threshold:",
+                good_matches_threshold
+            )
+
+            # ------------------------------------------------
+            # MATCHING
             # ------------------------------------------------
 
             good_matches = []
 
             if (
-                len(descriptors1) >= 2
-                and len(descriptors2) >= 2
+                len(descriptors_1) > 0
+                and len(descriptors_2) > 0
             ):
 
-                matcher = self._create_matcher()
+                matcher = self._create_matcher(
+                    matcher_name
+                )
 
                 matches = matcher.knnMatch(
-                    descriptors1,
-                    descriptors2,
+                    descriptors_1,
+                    descriptors_2,
                     k=2
                 )
 
+                for pair in matches:
 
-                # ------------------------------------------------
-                # 5. LOWE RATIO TEST
-                # ------------------------------------------------
-
-                for match_pair in matches:
-
-                    if len(match_pair) < 2:
+                    if len(pair) < 2:
                         continue
 
-                    m, n = match_pair
+                    m, n = pair
 
                     if (
                         m.distance
-                        < self.ratio_threshold * n.distance
+                        <
+                        ratio_threshold * n.distance
                     ):
-
                         good_matches.append(m)
 
-
             # ------------------------------------------------
-            # 6. GOOD MATCH COUNT
+            # COMPARISON RESULT
             # ------------------------------------------------
 
             good_matches_count = len(
                 good_matches
+            )
+
+            images_match = (
+                good_matches_count
+                >= good_matches_threshold
             )
 
             print(
@@ -353,122 +308,53 @@ class SiftComparisonTest(Component):
                 good_matches_count
             )
 
-
-            # ------------------------------------------------
-            # 7. MATCH / NO MATCH
-            # ------------------------------------------------
-
-            images_match = (
-                good_matches_count
-                >= self.good_matches_threshold
+            print(
+                "Images match:",
+                images_match
             )
 
-
             # ------------------------------------------------
-            # 8. KEYPOINTS
-            # ------------------------------------------------
-
-            all_keypoints = (
-                keypoints1 + keypoints2
-            )
-
-            offset = len(
-                keypoints1
-            )
-
-            keypoints = [
-
-                KeyPoints(
-                    cx=float(kp.pt[0]),
-                    cy=float(kp.pt[1]),
-                    confidence=1.0
-                )
-
-                for kp in all_keypoints
-
-            ]
-
-
-            # ------------------------------------------------
-            # 9. CONNECTIONS
+            # OUTPUT
             # ------------------------------------------------
 
-            connections = [
+            output = {
 
-                Connection(
-                    p1=match.queryIdx,
-                    p2=match.trainIdx + offset
-                )
-
-                for match in good_matches
-
-            ]
-
-
-            # ------------------------------------------------
-            # 10. OUTPUT DETECTIONS
-            # ------------------------------------------------
-
-            self.output_detections = [
-
-                Detection(
-
-                    boundingBox=None,
-
-                    keyPoints=keypoints,
-
-                    connections=connections,
-
-                    confidence=float(
-                        good_matches_count
+                "keypoints_1":
+                    self._keypoints_to_list(
+                        keypoints_1
                     ),
 
-                    classId=(
-                        1
-                        if images_match
-                        else 0
+                "descriptors_1":
+                    self._descriptors_to_list(
+                        descriptors_1
                     ),
 
-                    classLabel=(
-                        "Match"
-                        if images_match
-                        else "NoMatch"
+                "keypoints_2":
+                    self._keypoints_to_list(
+                        keypoints_2
                     ),
 
-                    imgUID=self.uID
+                "descriptors_2":
+                    self._descriptors_to_list(
+                        descriptors_2
+                    ),
 
-                )
+                "good_matches_count":
+                    good_matches_count,
 
+                "images_match":
+                    images_match
+            }
+
+            self.context.output_detections = [
+                output
             ]
 
-
-            # ------------------------------------------------
-            # 11. VISUALIZATION
-            # ------------------------------------------------
-
-            self.output_visualization = None
-
-            if self.visualize:
-
-                self.output_visualization = (
-                    self._build_visualization(
-                        image_1,
-                        image_2,
-                        keypoints1,
-                        keypoints2,
-                        good_matches
-                    )
-                )
-
-
-            # ------------------------------------------------
-            # 12. RESPONSE
-            # ------------------------------------------------
-
-            return build_response_sift_comparison_test(
-                context=self
+            print(
+                "SIFT Comparison output created successfully."
             )
 
+            return self.context
 
         except Exception as e:
 
@@ -478,14 +364,3 @@ class SiftComparisonTest(Component):
             )
 
             raise
-
-
-# ============================================================
-# EXECUTOR
-# ============================================================
-
-if __name__ == "__main__":
-
-    Executor(
-        sys.argv[1]
-    ).run()

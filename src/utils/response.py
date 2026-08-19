@@ -8,7 +8,6 @@ from components.SiftComparisonTest.src.models.PackageModel import (
     SiftComparisonTestResponse,
     SiftComparisonTestOutputs,
     OutputDetections,
-    OutputVisualization,
 )
 
 
@@ -18,17 +17,8 @@ def build_response_sift_comparison_test(context):
         value=context.output_detections
     )
 
-    output_visualization = OutputVisualization(
-        value=getattr(
-            context,
-            "output_visualization",
-            None
-        )
-    )
-
     outputs = SiftComparisonTestOutputs(
-        OutputDetections=output_detections,
-        OutputVisualization=output_visualization,
+        OutputDetections=output_detections
     )
 
     response = SiftComparisonTestResponse(
