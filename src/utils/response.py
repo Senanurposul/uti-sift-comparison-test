@@ -1,32 +1,63 @@
 from sdks.novavision.src.helper.package import PackageHelper
+
 from components.SiftComparisonTest.src.models.PackageModel import (
     PackageModel,
     PackageConfigs,
     ConfigExecutor,
-    SiftComparisonExecutor,
-    SiftComparisonExecutorResponse,
-    SiftComparisonExecutorOutputs,
+    SiftComparisonTest,
+    SiftComparisonTestResponse,
+    SiftComparisonTestOutputs,
     OutputDetections,
-    OutputMatchesImage
+    OutputVisualization,
 )
 
 
-def build_response_sift_comparison(context):
-    outputDetections = OutputDetections(value=context.output_detections)
+def build_response_sift_comparison_test(context):
 
-    outputs_dict = {
-        "outputDetections": outputDetections
-    }
+    # Detection output
+    output_detections = OutputDetections(
+        value=context.output_detections
+    )
 
-    if hasattr(context, "output_matches_image") and context.output_matches_image is not None:
-        outputs_dict["outputMatchesImage"] = OutputMatchesImage(value=context.output_matches_image)
+    # Visualization output
+    output_visualization = OutputVisualization(
+        value=getattr(
+            context,
+            "output_visualization",
+            None
+        )
+    )
 
-    siftComparisonExecutorOutputs = SiftComparisonExecutorOutputs(**outputs_dict)
-    siftComparisonExecutorResponse = SiftComparisonExecutorResponse(outputs=siftComparisonExecutorOutputs)
-    siftComparisonExecutor = SiftComparisonExecutor(value=siftComparisonExecutorResponse)
-    configExecutor = ConfigExecutor(value=siftComparisonExecutor)
-    packageConfigs = PackageConfigs(executor=configExecutor)
-    package = PackageHelper(packageModel=PackageModel, packageConfigs=packageConfigs)
-    packageModel = package.build_model(context)
+    # Outputs
+    outputs = SiftComparisonTestOutputs(
+        OutputDetections=output_detections,
+        OutputVisualization=output_visualization
+    )
 
-    return packageModel
+    # Response
+    response = SiftComparisonTestResponse(
+        outputs=outputs
+    )
+
+    # Executor
+    executor = SiftComparisonTest(
+        value=response
+    )
+
+    # Config Executor
+    configExecutor = ConfigExecutor(
+        value=executor
+    )
+
+    # Package Config
+    packageConfigs = PackageConfigs(
+        executor=configExecutor
+    )
+
+    # Package
+    package = PackageHelper(
+        packageModel=PackageModel,
+        packageConfigs=packageConfigs
+    )
+
+    return package.build_model(context)
