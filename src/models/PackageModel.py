@@ -37,7 +37,7 @@ class InputSIFTOutput2(Input):
 
 
 # ============================================================
-# OUTPUT
+# OUTPUTS
 # ============================================================
 
 class OutputDetections(Output):
@@ -101,7 +101,12 @@ class MatcherBF(Config):
 
 class Matcher(Config):
     name: Literal["Matcher"] = "Matcher"
-    value: Union[MatcherFlann, MatcherBF]
+
+    value: Union[
+        MatcherFlann,
+        MatcherBF
+    ]
+
     type: Literal["object"] = "object"
     field: Literal["dropdownlist"] = "dropdownlist"
 
@@ -147,6 +152,7 @@ class SiftComparisonTestResponse(Response):
 # ============================================================
 
 class SiftComparisonTest(Config):
+
     name: Literal["SiftComparisonTest"] = "SiftComparisonTest"
 
     value: Union[
@@ -158,25 +164,36 @@ class SiftComparisonTest(Config):
     field: Literal["option"] = "option"
 
     class Config:
-        title = "SIFT Comparison Test"
+        title = "SIFT Comparison"
+
         json_schema_extra = {
-            "target": {"value": 0},
-            "shortDescription": "SIFT feature extraction and comparison"
+            "target": {
+                "value": 0
+            },
+            "shortDescription": "Feature-based image matching"
         }
 
 
 class ConfigExecutor(Config):
+
     name: Literal["ConfigExecutor"] = "ConfigExecutor"
+
     value: Union[SiftComparisonTest]
+
     type: Literal["executor"] = "executor"
     field: Literal["dependentDropdownlist"] = "dependentDropdownlist"
 
     class Config:
         title = "Task"
+
         json_schema_extra = {
             "target": "value"
         }
 
+
+# ============================================================
+# PACKAGE CONFIG
+# ============================================================
 
 class PackageConfigs(Configs):
     executor: ConfigExecutor
@@ -187,6 +204,9 @@ class PackageConfigs(Configs):
 # ============================================================
 
 class PackageModel(Package):
+
     name: Literal["SiftComparisonTest"] = "SiftComparisonTest"
+
     configs: PackageConfigs
+
     type: Literal["component"] = "component"
