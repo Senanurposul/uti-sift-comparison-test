@@ -38,7 +38,7 @@ class InputSIFTOutput2(Input):
 
 class InputImage1(Input):
     name: Literal["InputImage1"] = "InputImage1"
-    value: Optional[Image] = None
+    value: Image
     type: Literal["object"] = "object"
 
     class Config:
@@ -47,7 +47,7 @@ class InputImage1(Input):
 
 class InputImage2(Input):
     name: Literal["InputImage2"] = "InputImage2"
-    value: Optional[Image] = None
+    value: Image
     type: Literal["object"] = "object"
 
     class Config:
@@ -155,8 +155,8 @@ class SiftComparisonTestInputs(Inputs):
     InputSIFTOutput1: InputSIFTOutput1
     InputSIFTOutput2: InputSIFTOutput2
 
-    InputImage1: Optional[InputImage1] = None
-    InputImage2: Optional[InputImage2] = None
+    InputImage1: InputImage1
+    InputImage2: InputImage2
 
 
 class SiftComparisonTestOutputs(Outputs):
