@@ -5,7 +5,6 @@ import json
 import cv2
 import numpy as np
 
-
 sys.path.append(
     os.path.join(
         os.path.dirname(__file__),
@@ -13,19 +12,14 @@ sys.path.append(
     )
 )
 
-
 from sdks.novavision.src.media.image import Image
-
 from sdks.novavision.src.base.component import Component
-
 from sdks.novavision.src.base.model import (
     KeyPoints,
     Detection,
     Connection
 )
-
 from sdks.novavision.src.helper.executor import Executor
-
 
 from components.SiftComparisonTest.src.utils.response import (
     build_response_sift_comparison_test
@@ -82,7 +76,7 @@ class SiftComparisonTest(Component):
         # ====================================================
 
         if self.visualization_matches is None:
-            self.visualization_matches = -1
+            self.visualization_matches = "Disabled"
 
         if self.visualization_matches_value is None:
             self.visualization_matches_value = 20
@@ -92,13 +86,13 @@ class SiftComparisonTest(Component):
         # ====================================================
 
         print(
-            "SIFTCOMPARISONTEST - VISUALIZATION CONFIG:",
+            "SIFTCOMPARISONTEST - VISUALIZATION CONFIG RAW:",
             repr(self.visualization_matches),
             flush=True
         )
 
         print(
-            "SIFTCOMPARISONTEST - VISUALIZATION VALUE:",
+            "SIFTCOMPARISONTEST - VISUALIZATION VALUE RAW:",
             repr(self.visualization_matches_value),
             flush=True
         )
@@ -135,16 +129,13 @@ class SiftComparisonTest(Component):
 
         self.output_visualization = None
 
-
     # ========================================================
     # BOOTSTRAP
     # ========================================================
 
     @staticmethod
     def bootstrap(config: dict) -> dict:
-
         return {}
-
 
     # ========================================================
     # EXTRACT SIFT KEYPOINTS + DESCRIPTORS
@@ -156,7 +147,6 @@ class SiftComparisonTest(Component):
     ):
 
         keypoints_dicts = []
-
         descriptors = []
 
         # ====================================================
@@ -223,7 +213,6 @@ class SiftComparisonTest(Component):
                 detection,
                 dict
             ):
-
                 continue
 
             if "value" in detection:
@@ -248,7 +237,6 @@ class SiftComparisonTest(Component):
                 )
 
                 if descriptor is None:
-
                     continue
 
                 keypoints_dicts.append(
@@ -322,7 +310,6 @@ class SiftComparisonTest(Component):
             descriptors_array
         )
 
-
     # ========================================================
     # CREATE VISUALIZATION
     # ========================================================
@@ -341,13 +328,11 @@ class SiftComparisonTest(Component):
         # ====================================================
 
         if frame1 is None:
-
             raise ValueError(
                 "Visualization frame 1 is None"
             )
 
         if frame2 is None:
-
             raise ValueError(
                 "Visualization frame 2 is None"
             )
@@ -361,13 +346,11 @@ class SiftComparisonTest(Component):
         )
 
         if frame1.size == 0:
-
             raise ValueError(
                 "Visualization frame 1 is empty"
             )
 
         if frame2.size == 0:
-
             raise ValueError(
                 "Visualization frame 2 is empty"
             )
@@ -456,7 +439,15 @@ class SiftComparisonTest(Component):
         # VISUALIZATION MATCH LIMIT
         # ====================================================
 
-        visualization_limit = self._get_visualization_limit()
+        visualization_limit = (
+            self._get_visualization_limit()
+        )
+
+        print(
+            "SIFTCOMPARISONTEST - FINAL VISUALIZATION LIMIT:",
+            visualization_limit,
+            flush=True
+        )
 
         # ====================================================
         # DISABLED = ALL MATCHES
@@ -465,18 +456,22 @@ class SiftComparisonTest(Component):
 
         if visualization_limit == -1:
 
-            visualization_matches = (
+            visualization_matches = list(
                 good_match_objects
             )
 
         else:
 
-            visualization_matches = sorted(
+            sorted_matches = sorted(
                 good_match_objects,
                 key=lambda match: match.distance
-            )[
-                :visualization_limit
-            ]
+            )
+
+            visualization_matches = (
+                sorted_matches[
+                    :visualization_limit
+                ]
+            )
 
         # ====================================================
         # DEBUG
@@ -491,7 +486,7 @@ class SiftComparisonTest(Component):
         )
 
         print(
-            "SIFTCOMPARISONTEST - VISUALIZATION MATCHES:",
+            "SIFTCOMPARISONTEST - MATCHES TO DRAW:",
             len(
                 visualization_matches
             ),
@@ -524,7 +519,6 @@ class SiftComparisonTest(Component):
 
         return visualization
 
-
     # ========================================================
     # GET VISUALIZATION LIMIT
     # ========================================================
@@ -534,7 +528,17 @@ class SiftComparisonTest(Component):
         config = self.visualization_matches
 
         # ====================================================
-        # NO CONFIG
+        # DEBUG RAW CONFIG
+        # ====================================================
+
+        print(
+            "SIFTCOMPARISONTEST - GET LIMIT CONFIG:",
+            repr(config),
+            flush=True
+        )
+
+        # ====================================================
+        # NONE
         # ====================================================
 
         if config is None:
@@ -547,21 +551,23 @@ class SiftComparisonTest(Component):
 
         if isinstance(
             config,
-            int
+            (int, float)
         ):
 
-            # -1 = all
-            if config < 0:
+            config_value = int(
+                config
+            )
 
+            if config_value < 0:
                 return -1
 
             return max(
-                config,
+                config_value,
                 1
             )
 
         # ====================================================
-        # STRING
+        # DIRECT STRING
         # ====================================================
 
         if isinstance(
@@ -569,13 +575,30 @@ class SiftComparisonTest(Component):
             str
         ):
 
-            config_lower = config.lower()
+            config_lower = (
+                config.strip().lower()
+            )
+
+            print(
+                "SIFTCOMPARISONTEST - CONFIG STRING:",
+                config_lower,
+                flush=True
+            )
 
             # ------------------------------------------------
             # DISABLED
             # ------------------------------------------------
 
-            if config_lower == "disabled":
+            if (
+                config_lower == "disabled"
+                or
+                config_lower == "visualizationmatchesdisabled"
+            ):
+
+                print(
+                    "SIFTCOMPARISONTEST - MODE: DISABLED",
+                    flush=True
+                )
 
                 return -1
 
@@ -583,18 +606,38 @@ class SiftComparisonTest(Component):
             # ENABLED
             # ------------------------------------------------
 
-            if config_lower == "enabled":
+            if (
+                config_lower == "enabled"
+                or
+                config_lower == "visualizationmatchesenabled"
+            ):
 
                 try:
 
-                    return max(
-                        int(
-                            self.visualization_matches_value
-                        ),
+                    limit = int(
+                        self.visualization_matches_value
+                    )
+
+                    limit = max(
+                        limit,
                         1
                     )
 
+                    print(
+                        "SIFTCOMPARISONTEST - MODE: ENABLED",
+                        "LIMIT:",
+                        limit,
+                        flush=True
+                    )
+
+                    return limit
+
                 except Exception:
+
+                    print(
+                        "SIFTCOMPARISONTEST - ENABLED VALUE INVALID, USING 20",
+                        flush=True
+                    )
 
                     return 20
 
@@ -609,7 +652,6 @@ class SiftComparisonTest(Component):
                 )
 
                 if config_value < 0:
-
                     return -1
 
                 return max(
@@ -619,10 +661,95 @@ class SiftComparisonTest(Component):
 
             except Exception:
 
-                return -1
+                pass
 
         # ====================================================
-        # OBJECT / CONFIG
+        # DICT CONFIG
+        # ====================================================
+
+        if isinstance(
+            config,
+            dict
+        ):
+
+            print(
+                "SIFTCOMPARISONTEST - CONFIG IS DICT",
+                flush=True
+            )
+
+            name = config.get(
+                "name",
+                ""
+            )
+
+            value = config.get(
+                "value",
+                None
+            )
+
+            name_lower = str(
+                name
+            ).strip().lower()
+
+            if (
+                name_lower == "disabled"
+                or
+                name_lower == "visualizationmatchesdisabled"
+            ):
+
+                return -1
+
+            if (
+                name_lower == "enabled"
+                or
+                name_lower == "visualizationmatchesenabled"
+            ):
+
+                try:
+
+                    return max(
+                        int(
+                            self._unwrap_value(
+                                value
+                            )
+                        ),
+                        1
+                    )
+
+                except Exception:
+
+                    return 20
+
+            # If dictionary itself contains a value
+            try:
+
+                if value is not None:
+
+                    unwrapped = (
+                        self._unwrap_value(
+                            value
+                        )
+                    )
+
+                    if isinstance(
+                        unwrapped,
+                        (int, float)
+                    ):
+
+                        if int(unwrapped) < 0:
+                            return -1
+
+                        return max(
+                            int(unwrapped),
+                            1
+                        )
+
+            except Exception:
+
+                pass
+
+        # ====================================================
+        # OBJECT / ENUM / PYDANTIC
         # ====================================================
 
         value = getattr(
@@ -631,17 +758,123 @@ class SiftComparisonTest(Component):
             None
         )
 
-        # ----------------------------------------------------
-        # Disabled object
-        # ----------------------------------------------------
+        name = getattr(
+            config,
+            "name",
+            None
+        )
+
+        # ====================================================
+        # ENUM NAME
+        # ====================================================
+
+        if name is not None:
+
+            name_lower = str(
+                name
+            ).strip().lower()
+
+            print(
+                "SIFTCOMPARISONTEST - OBJECT NAME:",
+                name_lower,
+                flush=True
+            )
+
+            if (
+                name_lower == "disabled"
+                or
+                name_lower == "visualizationmatchesdisabled"
+            ):
+
+                print(
+                    "SIFTCOMPARISONTEST - MODE: DISABLED",
+                    flush=True
+                )
+
+                return -1
+
+            if (
+                name_lower == "enabled"
+                or
+                name_lower == "visualizationmatchesenabled"
+            ):
+
+                try:
+
+                    limit = int(
+                        self._unwrap_value(
+                            self.visualization_matches_value
+                        )
+                    )
+
+                    limit = max(
+                        limit,
+                        1
+                    )
+
+                    print(
+                        "SIFTCOMPARISONTEST - MODE: ENABLED",
+                        "LIMIT:",
+                        limit,
+                        flush=True
+                    )
+
+                    return limit
+
+                except Exception:
+
+                    return 20
+
+        # ====================================================
+        # ENUM VALUE
+        # ====================================================
+
+        if isinstance(
+            value,
+            str
+        ):
+
+            value_lower = (
+                value.strip().lower()
+            )
+
+            if (
+                value_lower == "disabled"
+                or
+                value_lower == "visualizationmatchesdisabled"
+            ):
+
+                return -1
+
+            if (
+                value_lower == "enabled"
+                or
+                value_lower == "visualizationmatchesenabled"
+            ):
+
+                try:
+
+                    return max(
+                        int(
+                            self.visualization_matches_value
+                        ),
+                        1
+                    )
+
+                except Exception:
+
+                    return 20
+
+        # ====================================================
+        # NUMERIC VALUE
+        # ====================================================
 
         if isinstance(
             value,
             (int, float)
         ):
 
-            if value < 0:
-
+            if int(value) < 0:
                 return -1
 
             return max(
@@ -649,57 +882,148 @@ class SiftComparisonTest(Component):
                 1
             )
 
-        # ----------------------------------------------------
-        # Enabled object
-        # ----------------------------------------------------
+        # ====================================================
+        # NESTED VALUE
+        # ====================================================
 
-        value_name = getattr(
+        if value is not None:
+
+            nested_name = getattr(
+                value,
+                "name",
+                None
+            )
+
+            nested_value = getattr(
+                value,
+                "value",
+                None
+            )
+
+            if nested_name is not None:
+
+                nested_name_lower = str(
+                    nested_name
+                ).strip().lower()
+
+                if (
+                    nested_name_lower == "disabled"
+                    or
+                    nested_name_lower == "visualizationmatchesdisabled"
+                ):
+
+                    return -1
+
+                if (
+                    nested_name_lower == "enabled"
+                    or
+                    nested_name_lower == "visualizationmatchesenabled"
+                ):
+
+                    try:
+
+                        return max(
+                            int(
+                                self._unwrap_value(
+                                    self.visualization_matches_value
+                                )
+                            ),
+                            1
+                        )
+
+                    except Exception:
+
+                        return 20
+
+            if nested_value is not None:
+
+                try:
+
+                    nested_numeric = int(
+                        nested_value
+                    )
+
+                    if nested_numeric < 0:
+                        return -1
+
+                    return max(
+                        nested_numeric,
+                        1
+                    )
+
+                except Exception:
+
+                    pass
+
+        # ====================================================
+        # FALLBACK
+        # ====================================================
+
+        print(
+            "SIFTCOMPARISONTEST - UNKNOWN VISUALIZATION CONFIG",
+            repr(config),
+            "-> USING DISABLED",
+            flush=True
+        )
+
+        return -1
+
+    # ========================================================
+    # UNWRAP VALUE
+    # ========================================================
+
+    def _unwrap_value(self, value):
+
+        if value is None:
+            return None
+
+        if isinstance(
+            value,
+            (int, float, str)
+        ):
+            return value
+
+        if isinstance(
+            value,
+            dict
+        ):
+
+            if "value" in value:
+
+                return self._unwrap_value(
+                    value["value"]
+                )
+
+            if "name" in value:
+
+                return value["name"]
+
+        nested_value = getattr(
+            value,
+            "value",
+            None
+        )
+
+        if nested_value is not None:
+
+            if nested_value is value:
+                return value
+
+            return self._unwrap_value(
+                nested_value
+            )
+
+        nested_name = getattr(
             value,
             "name",
             None
         )
 
-        if value_name == "VisualizationMatchesEnabled":
+        if nested_name is not None:
 
-            enabled_value = getattr(
-                value,
-                "VisualizationMatchesValue",
-                None
-            )
+            return nested_name
 
-            enabled_value = getattr(
-                enabled_value,
-                "value",
-                enabled_value
-            )
-
-            try:
-
-                return max(
-                    int(
-                        enabled_value
-                    ),
-                    1
-                )
-
-            except Exception:
-
-                return 20
-
-        # ----------------------------------------------------
-        # Disabled object
-        # ----------------------------------------------------
-
-        if value_name == "VisualizationMatchesDisabled":
-
-            return -1
-
-        # ----------------------------------------------------
-        # Fallback
-        # ----------------------------------------------------
-
-        return -1
-
+        return value
 
     # ========================================================
     # RUN
@@ -757,7 +1081,8 @@ class SiftComparisonTest(Component):
 
             if (
                 len(descriptors1) < 2
-                or len(descriptors2) < 2
+                or
+                len(descriptors2) < 2
             ):
 
                 self.output_detections = [
@@ -829,7 +1154,6 @@ class SiftComparisonTest(Component):
             for pair in matches:
 
                 if len(pair) < 2:
-
                     continue
 
                 m, n = pair
