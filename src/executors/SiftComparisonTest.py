@@ -5,19 +5,28 @@ import cv2
 import numpy as np
 
 sys.path.append(
-    os.path.join(os.path.dirname(__file__), "../../../../")
+    os.path.join(
+        os.path.dirname(__file__),
+        "../../../../"
+    )
 )
 
 from sdks.novavision.src.media.image import Image
 from sdks.novavision.src.base.component import Component
-from sdks.novavision.src.base.model import KeyPoints, Detection, Connection
+from sdks.novavision.src.base.model import (
+    KeyPoints,
+    Detection,
+    Connection
+)
 from sdks.novavision.src.helper.executor import Executor
 
 from components.SiftComparisonTest.src.utils.response import (
     build_response_sift_comparison_test
 )
 
-from components.SiftComparisonTest.src.models.PackageModel import PackageModel
+from components.SiftComparisonTest.src.models.PackageModel import (
+    PackageModel
+)
 
 
 class SiftComparisonTest(Component):
@@ -58,7 +67,7 @@ class SiftComparisonTest(Component):
         )
 
         # ====================================================
-        # VISUALIZATION IMAGE INPUTS
+        # VISUALIZATION INPUTS
         # ====================================================
 
         self.visualization_input_1 = self.request.get_param(
@@ -74,7 +83,6 @@ class SiftComparisonTest(Component):
         # ====================================================
 
         self.output_detections = []
-
         self.output_visualization = None
 
     # ========================================================
@@ -86,7 +94,7 @@ class SiftComparisonTest(Component):
         return {}
 
     # ========================================================
-    # EXTRACT SIFT DATA
+    # EXTRACT SIFT KEYPOINTS + DESCRIPTORS
     # ========================================================
 
     def _extract_keypoints_and_descriptors(
@@ -97,16 +105,8 @@ class SiftComparisonTest(Component):
         keypoints_dicts = []
         descriptors = []
 
-        # ----------------------------------------------------
-        # JSON STRING GELİRSE
-        # ----------------------------------------------------
-
         if isinstance(sift_output, str):
             sift_output = json.loads(sift_output)
-
-        # ----------------------------------------------------
-        # OUTPUT WRAPPER VARSA AÇ
-        # ----------------------------------------------------
 
         if isinstance(sift_output, dict):
 
@@ -119,30 +119,27 @@ class SiftComparisonTest(Component):
             elif "outputDetections" in sift_output:
                 sift_output = sift_output["outputDetections"]
 
-        # ----------------------------------------------------
-        # DETECTIONS
-        # ----------------------------------------------------
+        if sift_output is None:
+            return (
+                [],
+                np.empty(
+                    (0, 128),
+                    dtype=np.float32
+                )
+            )
 
         for detection in sift_output:
 
-            # Bazı durumlarda detection'ın içinde
-            # tekrar value olabilir.
-            if isinstance(detection, dict):
-
-                if "value" in detection:
-                    detection = detection["value"]
-
-                keypoints = detection.get(
-                    "keyPoints",
-                    []
-                )
-
-            else:
+            if not isinstance(detection, dict):
                 continue
 
-            # ------------------------------------------------
-            # KEYPOINTS
-            # ------------------------------------------------
+            if "value" in detection:
+                detection = detection["value"]
+
+            keypoints = detection.get(
+                "keyPoints",
+                []
+            )
 
             for kp in keypoints:
 
@@ -179,10 +176,6 @@ class SiftComparisonTest(Component):
                     descriptor
                 )
 
-        # ----------------------------------------------------
-        # DESCRIPTOR ARRAY
-        # ----------------------------------------------------
-
         if len(descriptors) == 0:
 
             descriptors_array = np.empty(
@@ -215,10 +208,6 @@ class SiftComparisonTest(Component):
         good_match_objects
     ):
 
-        # ----------------------------------------------------
-        # FRAME KONTROL
-        # ----------------------------------------------------
-
         if frame1 is None:
             raise ValueError(
                 "Visualization frame 1 is None"
@@ -242,9 +231,9 @@ class SiftComparisonTest(Component):
                 "Visualization frame 2 is empty"
             )
 
-        # ----------------------------------------------------
+        # ====================================================
         # UINT8
-        # ----------------------------------------------------
+        # ====================================================
 
         if frame1.dtype != np.uint8:
             frame1 = frame1.astype(np.uint8)
@@ -252,9 +241,9 @@ class SiftComparisonTest(Component):
         if frame2.dtype != np.uint8:
             frame2 = frame2.astype(np.uint8)
 
-        # ----------------------------------------------------
-        # GRAYSCALE İSE BGR'A ÇEVİR
-        # ----------------------------------------------------
+        # ====================================================
+        # GRAYSCALE -> BGR
+        # ====================================================
 
         if len(frame1.shape) == 2:
 
@@ -270,11 +259,9 @@ class SiftComparisonTest(Component):
                 cv2.COLOR_GRAY2BGR
             )
 
-        # ----------------------------------------------------
-        # OPENCV KEYPOINT OLUŞTUR
-        #
-        # SADECE x, y, size kullanıyoruz.
-        # ----------------------------------------------------
+        # ====================================================
+        # OPENCV KEYPOINTS
+        # ====================================================
 
         cv_keypoints1 = []
 
@@ -306,23 +293,45 @@ class SiftComparisonTest(Component):
                 )
             )
 
-        # ----------------------------------------------------
+        # ====================================================
+        # SADECE EN İYİ 50 MATCH
+        # ====================================================
+
+        visualization_matches = sorted(
+            good_match_objects,
+            key=lambda match: match.distance
+        )[:50]
+
+        print(
+            "SIFTCOMPARISONTEST - TOTAL GOOD MATCHES:",
+            len(good_match_objects),
+            flush=True
+        )
+
+        print(
+            "SIFTCOMPARISONTEST - VISUALIZATION MATCHES:",
+            len(visualization_matches),
+            flush=True
+        )
+
+        # ====================================================
         # DRAW MATCHES
-        #
-        # ÖNEMLİ:
-        # good_match_objects = [DMatch, DMatch, ...]
-        #
-        # [[DMatch], [DMatch], ...] DEĞİL.
-        # ----------------------------------------------------
+        # ====================================================
 
         visualization = cv2.drawMatches(
             frame1,
             cv_keypoints1,
             frame2,
             cv_keypoints2,
-            good_match_objects,
+            visualization_matches,
             None,
             flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS
+        )
+
+        print(
+            "SIFTCOMPARISONTEST - VISUALIZATION CREATED:",
+            visualization.shape,
+            flush=True
         )
 
         return visualization
@@ -336,11 +345,12 @@ class SiftComparisonTest(Component):
         try:
 
             print(
-                "SIFTCOMPARISONTEST - RUN START"
+                "SIFTCOMPARISONTEST - RUN START",
+                flush=True
             )
 
             # =================================================
-            # SIFT OUTPUTLARINI ÇIKAR
+            # SIFT OUTPUT 1
             # =================================================
 
             (
@@ -349,6 +359,10 @@ class SiftComparisonTest(Component):
             ) = self._extract_keypoints_and_descriptors(
                 self.sift_output_1
             )
+
+            # =================================================
+            # SIFT OUTPUT 2
+            # =================================================
 
             (
                 keypoints2_dicts,
@@ -360,21 +374,18 @@ class SiftComparisonTest(Component):
             print(
                 "SIFTCOMPARISONTEST - KEYPOINTS:",
                 len(keypoints1_dicts),
-                len(keypoints2_dicts)
+                len(keypoints2_dicts),
+                flush=True
             )
 
             # =================================================
-            # YETERLİ DESCRIPTOR VAR MI?
+            # YETERLİ DESCRIPTOR YOKSA
             # =================================================
 
             if (
                 len(descriptors1) < 2
                 or len(descriptors2) < 2
             ):
-
-                print(
-                    "SIFTCOMPARISONTEST - NOT ENOUGH DESCRIPTORS"
-                )
 
                 self.output_detections = [
                     Detection(
@@ -402,6 +413,11 @@ class SiftComparisonTest(Component):
                     cv2.NORM_L2
                 )
 
+                print(
+                    "SIFTCOMPARISONTEST - BF MATCHER",
+                    flush=True
+                )
+
             else:
 
                 matcher = cv2.FlannBasedMatcher(
@@ -412,6 +428,11 @@ class SiftComparisonTest(Component):
                     dict(
                         checks=50
                     )
+                )
+
+                print(
+                    "SIFTCOMPARISONTEST - FLANN MATCHER",
+                    flush=True
                 )
 
             # =================================================
@@ -426,12 +447,6 @@ class SiftComparisonTest(Component):
 
             # =================================================
             # LOWE RATIO TEST
-            # =================================================
-            #
-            # Burada özellikle DMatch nesnesini direkt
-            # good_match_objects listesine koyuyoruz.
-            #
-            # drawMatches bununla çalışacak.
             # =================================================
 
             good_match_objects = []
@@ -454,26 +469,29 @@ class SiftComparisonTest(Component):
                         m
                     )
 
+            # =================================================
+            # MATCH COUNT
+            # =================================================
+
             good_matches_count = len(
                 good_match_objects
             )
 
             print(
                 "SIFTCOMPARISONTEST - GOOD MATCHES:",
-                good_matches_count
+                good_matches_count,
+                flush=True
             )
-
-            # =================================================
-            # MATCH / NOMATCH
-            # =================================================
 
             images_match = (
                 good_matches_count
-                >= int(self.good_matches_threshold)
+                >= int(
+                    self.good_matches_threshold
+                )
             )
 
             # =================================================
-            # NOVAVISION KEYPOINT OUTPUT
+            # NOVAVISION KEYPOINTS
             # =================================================
 
             all_keypoints_dicts = (
@@ -528,58 +546,44 @@ class SiftComparisonTest(Component):
             self.output_detections = [
 
                 Detection(
-
                     boundingBox=None,
-
                     keyPoints=keypoints,
-
                     connections=connections,
-
                     confidence=float(
                         good_matches_count
                     ),
-
                     classId=(
                         1
                         if images_match
                         else 0
                     ),
-
                     classLabel=(
                         "Match"
                         if images_match
                         else "NoMatch"
                     ),
-
                     imgUID=self.uID
                 )
+
             ]
 
             # =================================================
-            # VISUALIZATION INPUTLARINI AL
+            # IMAGE 1
             # =================================================
-
-            print(
-                "SIFTCOMPARISONTEST - GET FRAME 1"
-            )
 
             image1_frame = Image.get_frame(
                 img=self.visualization_input_1,
                 redis_db=self.redis_db
             )
 
-            print(
-                "SIFTCOMPARISONTEST - GET FRAME 2"
-            )
+            # =================================================
+            # IMAGE 2
+            # =================================================
 
             image2_frame = Image.get_frame(
                 img=self.visualization_input_2,
                 redis_db=self.redis_db
             )
-
-            # =================================================
-            # FRAME KONTROL
-            # =================================================
 
             if image1_frame is None:
                 raise ValueError(
@@ -611,38 +615,30 @@ class SiftComparisonTest(Component):
 
             print(
                 "SIFTCOMPARISONTEST - FRAME1 SHAPE:",
-                frame1.shape
+                frame1.shape,
+                flush=True
             )
 
             print(
                 "SIFTCOMPARISONTEST - FRAME2 SHAPE:",
-                frame2.shape
+                frame2.shape,
+                flush=True
             )
 
             # =================================================
-            # VISUALIZATION
+            # CREATE VISUALIZATION
             # =================================================
 
             visualization = self._create_visualization(
-
                 frame1,
-
                 frame2,
-
                 keypoints1_dicts,
-
                 keypoints2_dicts,
-
                 good_match_objects
             )
 
-            print(
-                "SIFTCOMPARISONTEST - VISUALIZATION CREATED:",
-                visualization.shape
-            )
-
             # =================================================
-            # NOVAVISION IMAGE OLARAK REDIS'E YAZ
+            # SAVE VISUALIZATION
             # =================================================
 
             image1_frame.value = visualization
@@ -654,56 +650,37 @@ class SiftComparisonTest(Component):
             )
 
             print(
-                "SIFTCOMPARISONTEST - VISUALIZATION SAVED"
+                "SIFTCOMPARISONTEST - VISUALIZATION SAVED",
+                flush=True
             )
 
         except Exception as e:
 
-            # =================================================
-            # HATA LOG
-            # =================================================
-
             print(
                 "SIFTCOMPARISONTEST - ERROR:",
-                repr(e)
+                repr(e),
+                flush=True
             )
-
-            # =================================================
-            # MATCHING ÇALIŞMIŞSA ONU KORU
-            # =================================================
 
             if not self.output_detections:
 
                 self.output_detections = [
-
                     Detection(
-
                         boundingBox=None,
-
                         keyPoints=[],
-
                         connections=[],
-
                         confidence=0.0,
-
                         classId=0,
-
                         classLabel="NoMatch",
-
                         imgUID=self.uID
                     )
                 ]
 
-            # Visualization başarısızsa null kalabilir.
             self.output_visualization = None
 
         # =====================================================
         # RESPONSE
         # =====================================================
-
-        print(
-            "SIFTCOMPARISONTEST - BUILD RESPONSE"
-        )
 
         return build_response_sift_comparison_test(
             context=self
@@ -714,7 +691,7 @@ class SiftComparisonTest(Component):
 # MAIN
 # ============================================================
 
-if "__main__" == __name__:
+if __name__ == "__main__":
 
     Executor(
         sys.argv[1]
