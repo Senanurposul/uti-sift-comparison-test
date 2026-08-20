@@ -1,5 +1,5 @@
 from pydantic import validator
-from typing import List, Union, Literal, Optional, Any
+from typing import List, Optional, Union, Literal, Any
 
 from sdks.novavision.src.base.model import (
     Package,
@@ -21,46 +21,24 @@ from sdks.novavision.src.base.model import (
 
 class InputSIFTOutput1(Input):
     name: Literal["InputSIFTOutput1"] = "InputSIFTOutput1"
-    value: Union[List[Image], Image]
-    type: str = "object"
-
-    @validator("type", pre=True, always=True)
-    def set_type_based_on_value(cls, value, values):
-        value = values.get("value")
-
-        if isinstance(value, Image):
-            return "object"
-        elif isinstance(value, list):
-            return "list"
-
-        return "object"
+    value: Optional[Any]
+    type: Literal["object"] = "object"
 
     class Config:
-        title = "Image Input 1"
+        title = "SIFT Output 1"
 
 
 class InputSIFTOutput2(Input):
     name: Literal["InputSIFTOutput2"] = "InputSIFTOutput2"
-    value: Union[List[Image], Image]
-    type: str = "object"
-
-    @validator("type", pre=True, always=True)
-    def set_type_based_on_value(cls, value, values):
-        value = values.get("value")
-
-        if isinstance(value, Image):
-            return "object"
-        elif isinstance(value, list):
-            return "list"
-
-        return "object"
+    value: Optional[Any]
+    type: Literal["object"] = "object"
 
     class Config:
-        title = "Image Input 2"
+        title = "SIFT Output 2"
 
 
 # ============================================================
-# OUTPUT
+# OUTPUTS
 # ============================================================
 
 class OutputDetections(Output):
@@ -77,6 +55,16 @@ class OutputDetections(Output):
 # ============================================================
 
 class GoodMatchesThreshold(Config):
+    """
+    Minimum number of good feature matches required to
+    consider the two images as matching.
+
+    Lower values are more lenient.
+    Higher values are stricter.
+
+    Default: 50
+    """
+
     name: Literal["GoodMatchesThreshold"] = "GoodMatchesThreshold"
     value: int = 50
     type: Literal["number"] = "number"
@@ -84,9 +72,21 @@ class GoodMatchesThreshold(Config):
 
     class Config:
         title = "Good Matches Threshold"
+        json_schema_extra = {
+            "shortDescription": "Min matches to consider a match"
+        }
 
 
 class RatioThreshold(Config):
+    """
+    Threshold used by Lowe's ratio test.
+
+    Lower values are stricter.
+    Higher values are more lenient.
+
+    Default: 0.7
+    """
+
     name: Literal["RatioThreshold"] = "RatioThreshold"
     value: float = 0.7
     type: Literal["number"] = "number"
@@ -94,9 +94,17 @@ class RatioThreshold(Config):
 
     class Config:
         title = "Ratio Threshold"
+        json_schema_extra = {
+            "shortDescription": "Lowe's ratio test (0.0-1.0)"
+        }
 
 
 class MatcherFlann(Config):
+    """
+    FLANN performs efficient approximate nearest-neighbor
+    search for SIFT descriptors.
+    """
+
     name: Literal["FlannBasedMatcher"] = "FlannBasedMatcher"
     value: Literal["FlannBasedMatcher"] = "FlannBasedMatcher"
     type: Literal["string"] = "string"
@@ -104,9 +112,17 @@ class MatcherFlann(Config):
 
     class Config:
         title = "FLANN Based Matcher"
+        json_schema_extra = {
+            "shortDescription": "Approximate nearest-neighbor matching"
+        }
 
 
 class MatcherBF(Config):
+    """
+    BFMatcher performs brute-force nearest-neighbor matching
+    using the L2 distance for SIFT descriptors.
+    """
+
     name: Literal["BFMatcher"] = "BFMatcher"
     value: Literal["BFMatcher"] = "BFMatcher"
     type: Literal["string"] = "string"
@@ -114,21 +130,33 @@ class MatcherBF(Config):
 
     class Config:
         title = "Brute Force Matcher"
+        json_schema_extra = {
+            "shortDescription": "Brute-force exact matching"
+        }
 
 
 class Matcher(Config):
+    """
+    Selects the matcher algorithm used to compare
+    SIFT descriptors.
+
+    FlannBasedMatcher:
+        Approximate nearest-neighbor search.
+
+    BFMatcher:
+        Brute-force nearest-neighbor search.
+    """
+
     name: Literal["Matcher"] = "Matcher"
-
-    value: Union[
-        MatcherFlann,
-        MatcherBF
-    ]
-
+    value: Union[MatcherFlann, MatcherBF]
     type: Literal["object"] = "object"
     field: Literal["dropdownlist"] = "dropdownlist"
 
     class Config:
         title = "Matcher Algorithm"
+        json_schema_extra = {
+            "shortDescription": "FLANN or Brute Force"
+        }
 
 
 class SiftComparisonTestConfigs(Configs):
@@ -138,7 +166,7 @@ class SiftComparisonTestConfigs(Configs):
 
 
 # ============================================================
-# REQUEST / RESPONSE
+# INPUT / OUTPUT MODELS
 # ============================================================
 
 class SiftComparisonTestInputs(Inputs):
@@ -165,41 +193,58 @@ class SiftComparisonTestResponse(Response):
 
 
 # ============================================================
-# EXECUTOR CONFIG
+# EXECUTOR CONFIGURATION
 # ============================================================
 
 class SiftComparisonTest(Config):
-    name: Literal["SiftComparisonTest"] = "SiftComparisonTest"
+    """
+    Compares two images using SIFT descriptors received
+    from external SIFT blocks.
 
+    The package does not calculate SIFT features itself.
+    It only performs descriptor matching.
+
+    Output:
+        - Keypoints
+        - Connections
+        - Good match count as confidence
+        - Match / NoMatch classification
+    """
+
+    name: Literal["SiftComparisonTest"] = "SiftComparisonTest"
     value: Union[
         SiftComparisonTestRequest,
         SiftComparisonTestResponse
     ]
-
     type: Literal["object"] = "object"
     field: Literal["option"] = "option"
 
     class Config:
         title = "SIFT Comparison"
-
         json_schema_extra = {
-            "target": {
-                "value": 0
-            },
+            "target": {"value": 0},
             "shortDescription": "Feature-based image matching"
         }
 
 
 class ConfigExecutor(Config):
+    """
+    SIFT Comparison executor.
+
+    Compares SIFT descriptors using either FLANN
+    or Brute Force matching.
+    """
+
     name: Literal["ConfigExecutor"] = "ConfigExecutor"
-
     value: Union[SiftComparisonTest]
-
     type: Literal["executor"] = "executor"
     field: Literal["dependentDropdownlist"] = "dependentDropdownlist"
 
     class Config:
         title = "Task"
+        json_schema_extra = {
+            "target": "value"
+        }
 
 
 class PackageConfigs(Configs):
@@ -207,12 +252,10 @@ class PackageConfigs(Configs):
 
 
 # ============================================================
-# PACKAGE
+# PACKAGE MODEL
 # ============================================================
 
 class PackageModel(Package):
-    configs: PackageConfigs
-
-    type: Literal["component"] = "component"
-
     name: Literal["SiftComparisonTest"] = "SiftComparisonTest"
+    configs: PackageConfigs
+    type: Literal["component"] = "component"
