@@ -7,24 +7,23 @@ from components.SiftComparisonTest.src.models.PackageModel import (
     SiftComparisonTestResponse,
     SiftComparisonTestOutputs,
     OutputDetections,
-    OutputMatchesImage,
+    OutputVisualization,
 )
 
 
 def build_response_sift_comparison_test(context):
     output_detections = OutputDetections(value=context.output_detections)
 
-    outputs_dict = {
-        "OutputDetections": output_detections,
-    }
+    # Görselleştirme üretilmediyse (EnableVisualization=False
+    # veya görüntüler sağlanmadıysa) value None olarak kalır.
+    output_visualization = OutputVisualization(
+        value=getattr(context, "output_visualization", None)
+    )
 
-    # Eğer görselleştirme üretildiyse yanıta eklenir
-    if hasattr(context, "output_matches_image") and context.output_matches_image is not None:
-        outputs_dict["OutputMatchesImage"] = OutputMatchesImage(
-            value=context.output_matches_image
-        )
-
-    outputs = SiftComparisonTestOutputs(**outputs_dict)
+    outputs = SiftComparisonTestOutputs(
+        OutputDetections=output_detections,
+        OutputVisualization=output_visualization,
+    )
     response = SiftComparisonTestResponse(outputs=outputs)
     executor = SiftComparisonTest(value=response)
     configExecutor = ConfigExecutor(value=executor)
