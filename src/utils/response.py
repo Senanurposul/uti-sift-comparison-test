@@ -63,12 +63,12 @@ def build_response_sift_comparison_test(context):
     # PACKAGE CONFIG
     # ========================================================
 
-    configExecutor = ConfigExecutor(
+    config_executor = ConfigExecutor(
         value=executor
     )
 
-    packageConfigs = PackageConfigs(
-        executor=configExecutor
+    package_configs = PackageConfigs(
+        executor=config_executor
     )
 
     # ========================================================
@@ -77,7 +77,7 @@ def build_response_sift_comparison_test(context):
 
     package = PackageHelper(
         packageModel=PackageModel,
-        packageConfigs=packageConfigs
+        packageConfigs=package_configs
     )
 
     return package.build_model(context)

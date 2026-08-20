@@ -1,5 +1,7 @@
 from typing import Optional, Union, Literal, Any
 
+from pydantic import Field
+
 from sdks.novavision.src.base.model import (
     Package,
     Image,
@@ -77,34 +79,42 @@ class OutputVisualization(Output):
 
 
 # ============================================================
-# CONFIGS
+# CONFIG - GOOD MATCHES THRESHOLD
 # ============================================================
 
 class GoodMatchesThreshold(Config):
     name: Literal["GoodMatchesThreshold"] = "GoodMatchesThreshold"
-    value: int = 50
+    value: int = Field(default=50, ge=1, le=100000)
     type: Literal["number"] = "number"
     field: Literal["textInput"] = "textInput"
 
     class Config:
         title = "Good Matches Threshold"
         json_schema_extra = {
-            "shortDescription": "Min matches to consider a match"
+            "shortDescription": "Minimum matches to consider a match."
         }
 
 
+# ============================================================
+# CONFIG - RATIO THRESHOLD
+# ============================================================
+
 class RatioThreshold(Config):
     name: Literal["RatioThreshold"] = "RatioThreshold"
-    value: float = 0.7
+    value: float = Field(default=0.7, ge=0.0, le=1.0)
     type: Literal["number"] = "number"
     field: Literal["textInput"] = "textInput"
 
     class Config:
         title = "Ratio Threshold"
         json_schema_extra = {
-            "shortDescription": "Lowe's ratio test (0.0-1.0)"
+            "shortDescription": "Lowe's ratio test (0.0-1.0)."
         }
 
+
+# ============================================================
+# CONFIG - MATCHER
+# ============================================================
 
 class MatcherFlann(Config):
     name: Literal["FlannBasedMatcher"] = "FlannBasedMatcher"
@@ -141,10 +151,92 @@ class Matcher(Config):
         title = "Matcher Algorithm"
 
 
+# ============================================================
+# CONFIG - VISUALIZATION MATCHES
+# ============================================================
+
+class VisualizationMatchesValue(Config):
+    name: Literal[
+        "VisualizationMatchesValue"
+    ] = "VisualizationMatchesValue"
+
+    value: int = Field(
+        default=50,
+        ge=1,
+        le=100000
+    )
+
+    type: Literal["number"] = "number"
+    field: Literal["textInput"] = "textInput"
+
+    class Config:
+        title = "Visualization Matches Value"
+        json_schema_extra = {
+            "shortDescription": "Maximum number of matches to draw."
+        }
+
+
+class VisualizationMatchesEnabled(Config):
+    name: Literal[
+        "VisualizationMatchesEnabled"
+    ] = "VisualizationMatchesEnabled"
+
+    value: Literal[
+        "VisualizationMatchesEnabled"
+    ] = "VisualizationMatchesEnabled"
+
+    type: Literal["string"] = "string"
+    field: Literal["option"] = "option"
+
+    VisualizationMatchesValue: VisualizationMatchesValue
+
+    class Config:
+        title = "Enabled"
+
+
+class VisualizationMatchesDisabled(Config):
+    name: Literal[
+        "VisualizationMatchesDisabled"
+    ] = "VisualizationMatchesDisabled"
+
+    value: int = 0
+
+    type: Literal["number"] = "number"
+    field: Literal["option"] = "option"
+
+    class Config:
+        title = "Disabled"
+
+
+class ConfigVisualizationMatches(Config):
+    name: Literal[
+        "ConfigVisualizationMatches"
+    ] = "ConfigVisualizationMatches"
+
+    value: Union[
+        VisualizationMatchesEnabled,
+        VisualizationMatchesDisabled
+    ]
+
+    type: Literal["object"] = "object"
+    field: Literal["dependentDropdownlist"] = "dependentDropdownlist"
+
+    class Config:
+        title = "Visualization Matches"
+        json_schema_extra = {
+            "shortDescription": "Limit the number of matches drawn."
+        }
+
+
+# ============================================================
+# CONFIGS
+# ============================================================
+
 class SiftComparisonTestConfigs(Configs):
     GoodMatchesThreshold: GoodMatchesThreshold
     RatioThreshold: RatioThreshold
     Matcher: Matcher
+    ConfigVisualizationMatches: ConfigVisualizationMatches
 
 
 # ============================================================
@@ -164,7 +256,7 @@ class SiftComparisonTestOutputs(Outputs):
 
 
 class SiftComparisonTestRequest(Request):
-    inputs: Optional[SiftComparisonTestInputs]
+    inputs: Optional[SiftComparisonTestInputs] = None
     configs: SiftComparisonTestConfigs
 
     class Config:
@@ -178,11 +270,10 @@ class SiftComparisonTestResponse(Response):
 
 
 # ============================================================
-# EXECUTOR
+# EXECUTOR MODEL
 # ============================================================
 
 class SiftComparisonTest(Config):
-
     name: Literal["SiftComparisonTest"] = "SiftComparisonTest"
 
     value: Union[
@@ -200,12 +291,11 @@ class SiftComparisonTest(Config):
             "target": {
                 "value": 0
             },
-            "shortDescription": "Feature-based image matching"
+            "shortDescription": "Feature-based image matching."
         }
 
 
 class ConfigExecutor(Config):
-
     name: Literal["ConfigExecutor"] = "ConfigExecutor"
 
     value: SiftComparisonTest
@@ -230,7 +320,6 @@ class PackageConfigs(Configs):
 
 
 class PackageModel(Package):
-
     name: Literal["SiftComparisonTest"] = "SiftComparisonTest"
 
     configs: PackageConfigs
