@@ -8,13 +8,14 @@ from components.SiftComparisonTest.src.models.PackageModel import (
     SiftComparisonTestResponse,
     SiftComparisonTestOutputs,
     OutputDetections,
+    OutputVisualization,
 )
 
 
 def build_response_sift_comparison_test(context):
 
     # --------------------------------------------------------
-    # Output
+    # OUTPUT DETECTIONS
     # --------------------------------------------------------
 
     output_detections = OutputDetections(
@@ -22,15 +23,24 @@ def build_response_sift_comparison_test(context):
     )
 
     # --------------------------------------------------------
-    # Outputs
+    # OUTPUT VISUALIZATION
     # --------------------------------------------------------
 
-    outputs = SiftComparisonTestOutputs(
-        OutputDetections=output_detections
+    output_visualization = OutputVisualization(
+        value=context.output_visualization
     )
 
     # --------------------------------------------------------
-    # Response
+    # OUTPUTS
+    # --------------------------------------------------------
+
+    outputs = SiftComparisonTestOutputs(
+        OutputDetections=output_detections,
+        OutputVisualization=output_visualization
+    )
+
+    # --------------------------------------------------------
+    # RESPONSE
     # --------------------------------------------------------
 
     response = SiftComparisonTestResponse(
@@ -38,7 +48,7 @@ def build_response_sift_comparison_test(context):
     )
 
     # --------------------------------------------------------
-    # Executor
+    # EXECUTOR
     # --------------------------------------------------------
 
     executor = SiftComparisonTest(
@@ -46,7 +56,7 @@ def build_response_sift_comparison_test(context):
     )
 
     # --------------------------------------------------------
-    # Package Config
+    # PACKAGE CONFIG
     # --------------------------------------------------------
 
     configExecutor = ConfigExecutor(
@@ -58,7 +68,7 @@ def build_response_sift_comparison_test(context):
     )
 
     # --------------------------------------------------------
-    # Package
+    # PACKAGE
     # --------------------------------------------------------
 
     package = PackageHelper(

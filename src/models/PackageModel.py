@@ -1,4 +1,6 @@
-from typing import Optional, Union, Literal, Any
+from typing import Optional, Union, Literal, Any, List
+
+from pydantic import validator
 
 from sdks.novavision.src.base.model import (
     Package,
@@ -10,7 +12,7 @@ from sdks.novavision.src.base.model import (
     Request,
     Output,
     Input,
-    Config,
+    Config
 )
 
 
@@ -36,6 +38,48 @@ class InputSIFTOutput2(Input):
         title = "SIFT Output 2"
 
 
+class InputImage1(Input):
+    name: Literal["InputImage1"] = "InputImage1"
+    value: Union[List[Image], Image]
+    type: str = "object"
+
+    @validator("type", pre=True, always=True)
+    def set_type_based_on_value(cls, value, values):
+        value = values.get("value")
+
+        if isinstance(value, Image):
+            return "object"
+
+        elif isinstance(value, list):
+            return "list"
+
+        return "object"
+
+    class Config:
+        title = "Image 1"
+
+
+class InputImage2(Input):
+    name: Literal["InputImage2"] = "InputImage2"
+    value: Union[List[Image], Image]
+    type: str = "object"
+
+    @validator("type", pre=True, always=True)
+    def set_type_based_on_value(cls, value, values):
+        value = values.get("value")
+
+        if isinstance(value, Image):
+            return "object"
+
+        elif isinstance(value, list):
+            return "list"
+
+        return "object"
+
+    class Config:
+        title = "Image 2"
+
+
 # ============================================================
 # OUTPUTS
 # ============================================================
@@ -47,6 +91,15 @@ class OutputDetections(Output):
 
     class Config:
         title = "Output Detections"
+
+
+class OutputVisualization(Output):
+    name: Literal["OutputVisualization"] = "OutputVisualization"
+    value: Optional[Image] = None
+    type: Literal["object"] = "object"
+
+    class Config:
+        title = "Output Visualization"
 
 
 # ============================================================
@@ -127,10 +180,13 @@ class SiftComparisonTestConfigs(Configs):
 class SiftComparisonTestInputs(Inputs):
     InputSIFTOutput1: InputSIFTOutput1
     InputSIFTOutput2: InputSIFTOutput2
+    InputImage1: InputImage1
+    InputImage2: InputImage2
 
 
 class SiftComparisonTestOutputs(Outputs):
     OutputDetections: OutputDetections
+    OutputVisualization: OutputVisualization
 
 
 class SiftComparisonTestRequest(Request):
