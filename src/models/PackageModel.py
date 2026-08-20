@@ -154,9 +154,8 @@ class SiftComparisonTestConfigs(Configs):
 class SiftComparisonTestInputs(Inputs):
     InputSIFTOutput1: InputSIFTOutput1
     InputSIFTOutput2: InputSIFTOutput2
-
-    InputImage1: Optional[InputImage1] = None
-    InputImage2: Optional[InputImage2] = None
+    InputImage1: InputImage1
+    InputImage2: InputImage2
 
 
 class SiftComparisonTestOutputs(Outputs):
@@ -183,7 +182,6 @@ class SiftComparisonTestResponse(Response):
 # ============================================================
 
 class SiftComparisonTest(Config):
-
     name: Literal["SiftComparisonTest"] = "SiftComparisonTest"
 
     value: Union[
@@ -206,7 +204,6 @@ class SiftComparisonTest(Config):
 
 
 class ConfigExecutor(Config):
-
     name: Literal["ConfigExecutor"] = "ConfigExecutor"
 
     value: Union[SiftComparisonTest]
@@ -231,7 +228,6 @@ class PackageConfigs(Configs):
 
 
 class PackageModel(Package):
-
     name: Literal["SiftComparisonTest"] = "SiftComparisonTest"
 
     configs: PackageConfigs
