@@ -1,6 +1,4 @@
-from typing import Optional, Union, Literal, Any, List
-
-from pydantic import validator
+from typing import Optional, Union, Literal, Any
 
 from sdks.novavision.src.base.model import (
     Package,
@@ -12,7 +10,7 @@ from sdks.novavision.src.base.model import (
     Request,
     Output,
     Input,
-    Config
+    Config,
 )
 
 
@@ -40,20 +38,8 @@ class InputSIFTOutput2(Input):
 
 class InputImage1(Input):
     name: Literal["InputImage1"] = "InputImage1"
-    value: Union[List[Image], Image]
-    type: str = "object"
-
-    @validator("type", pre=True, always=True)
-    def set_type_based_on_value(cls, value, values):
-        value = values.get("value")
-
-        if isinstance(value, Image):
-            return "object"
-
-        elif isinstance(value, list):
-            return "list"
-
-        return "object"
+    value: Optional[Image] = None
+    type: Literal["object"] = "object"
 
     class Config:
         title = "Image 1"
@@ -61,20 +47,8 @@ class InputImage1(Input):
 
 class InputImage2(Input):
     name: Literal["InputImage2"] = "InputImage2"
-    value: Union[List[Image], Image]
-    type: str = "object"
-
-    @validator("type", pre=True, always=True)
-    def set_type_based_on_value(cls, value, values):
-        value = values.get("value")
-
-        if isinstance(value, Image):
-            return "object"
-
-        elif isinstance(value, list):
-            return "list"
-
-        return "object"
+    value: Optional[Image] = None
+    type: Literal["object"] = "object"
 
     class Config:
         title = "Image 2"
@@ -128,7 +102,7 @@ class RatioThreshold(Config):
     class Config:
         title = "Ratio Threshold"
         json_schema_extra = {
-            "shortDescription": "Lowe ratio test threshold"
+            "shortDescription": "Lowe's ratio test threshold"
         }
 
 
@@ -180,8 +154,9 @@ class SiftComparisonTestConfigs(Configs):
 class SiftComparisonTestInputs(Inputs):
     InputSIFTOutput1: InputSIFTOutput1
     InputSIFTOutput2: InputSIFTOutput2
-    InputImage1: InputImage1
-    InputImage2: InputImage2
+
+    InputImage1: Optional[InputImage1] = None
+    InputImage2: Optional[InputImage2] = None
 
 
 class SiftComparisonTestOutputs(Outputs):
@@ -208,6 +183,7 @@ class SiftComparisonTestResponse(Response):
 # ============================================================
 
 class SiftComparisonTest(Config):
+
     name: Literal["SiftComparisonTest"] = "SiftComparisonTest"
 
     value: Union[
@@ -230,6 +206,7 @@ class SiftComparisonTest(Config):
 
 
 class ConfigExecutor(Config):
+
     name: Literal["ConfigExecutor"] = "ConfigExecutor"
 
     value: Union[SiftComparisonTest]
@@ -254,6 +231,7 @@ class PackageConfigs(Configs):
 
 
 class PackageModel(Package):
+
     name: Literal["SiftComparisonTest"] = "SiftComparisonTest"
 
     configs: PackageConfigs
