@@ -1,18 +1,18 @@
 from sdks.novavision.src.helper.package import PackageHelper
 
-from components.SiftComparisonTest.src.models.PackageModel import (
+from components.SIFTComparison.src.models.PackageModel import (
     PackageModel,
     PackageConfigs,
     ConfigExecutor,
-    SiftComparisonTest,
-    SiftComparisonTestResponse,
-    SiftComparisonTestOutputs,
+    SIFTComparison,
+    SIFTComparisonResponse,
+    SIFTComparisonOutputs,
     OutputDetections,
     OutputVisualization,
 )
 
 
-def build_response_sift_comparison_test(context):
+def build_response_sift_comparison(context):
 
     # ========================================================
     # OUTPUT DETECTIONS
@@ -38,7 +38,7 @@ def build_response_sift_comparison_test(context):
     # OUTPUTS
     # ========================================================
 
-    outputs = SiftComparisonTestOutputs(
+    outputs = SIFTComparisonOutputs(
         OutputDetections=output_detections,
         OutputVisualization=output_visualization
     )
@@ -47,7 +47,7 @@ def build_response_sift_comparison_test(context):
     # RESPONSE
     # ========================================================
 
-    response = SiftComparisonTestResponse(
+    response = SIFTComparisonResponse(
         outputs=outputs
     )
 
@@ -55,7 +55,7 @@ def build_response_sift_comparison_test(context):
     # EXECUTOR
     # ========================================================
 
-    executor = SiftComparisonTest(
+    executor = SIFTComparison(
         value=response
     )
 
@@ -80,4 +80,6 @@ def build_response_sift_comparison_test(context):
         packageConfigs=packageConfigs
     )
 
-    return package.build_model(context)
+    return package.build_model(
+        context
+    )
