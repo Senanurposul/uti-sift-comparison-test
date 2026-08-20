@@ -66,7 +66,7 @@ class SiftComparisonTest(Component):
         )
 
         # ====================================================
-        # VISUALIZATION MATCHES CONFIG
+        # VISUALIZATION CONFIG
         # ====================================================
 
         self.visualization_matches = self.request.get_param(
@@ -77,29 +77,29 @@ class SiftComparisonTest(Component):
             "VisualizationMatchesValue"
         )
 
-        # ----------------------------------------------------
-        # DEFAULT
-        # ----------------------------------------------------
+        # ====================================================
+        # DEFAULTS
+        # ====================================================
 
         if self.visualization_matches is None:
-            self.visualization_matches = "Disabled"
+            self.visualization_matches = -1
 
         if self.visualization_matches_value is None:
             self.visualization_matches_value = 20
 
-        # ----------------------------------------------------
+        # ====================================================
         # DEBUG
-        # ----------------------------------------------------
+        # ====================================================
 
         print(
-            "SIFTCOMPARISONTEST - VISUALIZATION MATCHES CONFIG:",
-            self.visualization_matches,
+            "SIFTCOMPARISONTEST - VISUALIZATION CONFIG:",
+            repr(self.visualization_matches),
             flush=True
         )
 
         print(
-            "SIFTCOMPARISONTEST - VISUALIZATION MATCHES VALUE:",
-            self.visualization_matches_value,
+            "SIFTCOMPARISONTEST - VISUALIZATION VALUE:",
+            repr(self.visualization_matches_value),
             flush=True
         )
 
@@ -159,9 +159,9 @@ class SiftComparisonTest(Component):
 
         descriptors = []
 
-        # ----------------------------------------------------
+        # ====================================================
         # STRING -> JSON
-        # ----------------------------------------------------
+        # ====================================================
 
         if isinstance(
             sift_output,
@@ -172,9 +172,9 @@ class SiftComparisonTest(Component):
                 sift_output
             )
 
-        # ----------------------------------------------------
+        # ====================================================
         # OUTPUT WRAPPER
-        # ----------------------------------------------------
+        # ====================================================
 
         if isinstance(
             sift_output,
@@ -199,9 +199,9 @@ class SiftComparisonTest(Component):
                     "outputDetections"
                 ]
 
-        # ----------------------------------------------------
+        # ====================================================
         # EMPTY OUTPUT
-        # ----------------------------------------------------
+        # ====================================================
 
         if sift_output is None:
 
@@ -237,9 +237,9 @@ class SiftComparisonTest(Component):
                 []
             )
 
-            # ------------------------------------------------
+            # =================================================
             # EACH KEYPOINT
-            # ------------------------------------------------
+            # =================================================
 
             for kp in keypoints:
 
@@ -337,7 +337,7 @@ class SiftComparisonTest(Component):
     ):
 
         # ====================================================
-        # CHECK FRAME 1
+        # FRAME CHECK
         # ====================================================
 
         if frame1 is None:
@@ -345,10 +345,6 @@ class SiftComparisonTest(Component):
             raise ValueError(
                 "Visualization frame 1 is None"
             )
-
-        # ====================================================
-        # CHECK FRAME 2
-        # ====================================================
 
         if frame2 is None:
 
@@ -363,10 +359,6 @@ class SiftComparisonTest(Component):
         frame2 = np.asarray(
             frame2
         )
-
-        # ====================================================
-        # EMPTY FRAME CHECK
-        # ====================================================
 
         if frame1.size == 0:
 
@@ -464,43 +456,20 @@ class SiftComparisonTest(Component):
         # VISUALIZATION MATCH LIMIT
         # ====================================================
 
-        if (
-            self.visualization_matches
-            == "Disabled"
-        ):
+        visualization_limit = self._get_visualization_limit()
 
-            # ------------------------------------------------
-            # DISABLED
-            # ------------------------------------------------
-            # Bütün good match'leri çiz
-            # ------------------------------------------------
+        # ====================================================
+        # DISABLED = ALL MATCHES
+        # ENABLED = SELECTED NUMBER
+        # ====================================================
+
+        if visualization_limit == -1:
 
             visualization_matches = (
                 good_match_objects
             )
 
         else:
-
-            # ------------------------------------------------
-            # ENABLED
-            # ------------------------------------------------
-            # En iyi eşleşmeleri sırala
-            # ------------------------------------------------
-
-            try:
-
-                visualization_limit = int(
-                    self.visualization_matches_value
-                )
-
-            except Exception:
-
-                visualization_limit = 20
-
-            visualization_limit = max(
-                visualization_limit,
-                1
-            )
 
             visualization_matches = sorted(
                 good_match_objects,
@@ -554,6 +523,182 @@ class SiftComparisonTest(Component):
         )
 
         return visualization
+
+
+    # ========================================================
+    # GET VISUALIZATION LIMIT
+    # ========================================================
+
+    def _get_visualization_limit(self):
+
+        config = self.visualization_matches
+
+        # ====================================================
+        # NO CONFIG
+        # ====================================================
+
+        if config is None:
+
+            return -1
+
+        # ====================================================
+        # DIRECT INTEGER
+        # ====================================================
+
+        if isinstance(
+            config,
+            int
+        ):
+
+            # -1 = all
+            if config < 0:
+
+                return -1
+
+            return max(
+                config,
+                1
+            )
+
+        # ====================================================
+        # STRING
+        # ====================================================
+
+        if isinstance(
+            config,
+            str
+        ):
+
+            config_lower = config.lower()
+
+            # ------------------------------------------------
+            # DISABLED
+            # ------------------------------------------------
+
+            if config_lower == "disabled":
+
+                return -1
+
+            # ------------------------------------------------
+            # ENABLED
+            # ------------------------------------------------
+
+            if config_lower == "enabled":
+
+                try:
+
+                    return max(
+                        int(
+                            self.visualization_matches_value
+                        ),
+                        1
+                    )
+
+                except Exception:
+
+                    return 20
+
+            # ------------------------------------------------
+            # STRING NUMBER
+            # ------------------------------------------------
+
+            try:
+
+                config_value = int(
+                    config
+                )
+
+                if config_value < 0:
+
+                    return -1
+
+                return max(
+                    config_value,
+                    1
+                )
+
+            except Exception:
+
+                return -1
+
+        # ====================================================
+        # OBJECT / CONFIG
+        # ====================================================
+
+        value = getattr(
+            config,
+            "value",
+            None
+        )
+
+        # ----------------------------------------------------
+        # Disabled object
+        # ----------------------------------------------------
+
+        if isinstance(
+            value,
+            (int, float)
+        ):
+
+            if value < 0:
+
+                return -1
+
+            return max(
+                int(value),
+                1
+            )
+
+        # ----------------------------------------------------
+        # Enabled object
+        # ----------------------------------------------------
+
+        value_name = getattr(
+            value,
+            "name",
+            None
+        )
+
+        if value_name == "VisualizationMatchesEnabled":
+
+            enabled_value = getattr(
+                value,
+                "VisualizationMatchesValue",
+                None
+            )
+
+            enabled_value = getattr(
+                enabled_value,
+                "value",
+                enabled_value
+            )
+
+            try:
+
+                return max(
+                    int(
+                        enabled_value
+                    ),
+                    1
+                )
+
+            except Exception:
+
+                return 20
+
+        # ----------------------------------------------------
+        # Disabled object
+        # ----------------------------------------------------
+
+        if value_name == "VisualizationMatchesDisabled":
+
+            return -1
+
+        # ----------------------------------------------------
+        # Fallback
+        # ----------------------------------------------------
+
+        return -1
 
 
     # ========================================================

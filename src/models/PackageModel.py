@@ -84,16 +84,19 @@ class OutputVisualization(Output):
 
 class GoodMatchesThreshold(Config):
     name: Literal["GoodMatchesThreshold"] = "GoodMatchesThreshold"
+
     value: int = Field(
         default=50,
         ge=1,
         le=100000
     )
+
     type: Literal["number"] = "number"
     field: Literal["textInput"] = "textInput"
 
     class Config:
         title = "Good Matches Threshold"
+
         json_schema_extra = {
             "shortDescription": "Minimum matches to consider a match."
         }
@@ -105,16 +108,19 @@ class GoodMatchesThreshold(Config):
 
 class RatioThreshold(Config):
     name: Literal["RatioThreshold"] = "RatioThreshold"
+
     value: float = Field(
         default=0.7,
         ge=0.0,
         le=1.0
     )
+
     type: Literal["number"] = "number"
     field: Literal["textInput"] = "textInput"
 
     class Config:
         title = "Ratio Threshold"
+
         json_schema_extra = {
             "shortDescription": "Lowe's ratio test (0.0-1.0)."
         }
@@ -127,6 +133,7 @@ class RatioThreshold(Config):
 class MatcherFlann(Config):
     name: Literal["FlannBasedMatcher"] = "FlannBasedMatcher"
     value: Literal["FlannBasedMatcher"] = "FlannBasedMatcher"
+
     type: Literal["string"] = "string"
     field: Literal["option"] = "option"
 
@@ -137,6 +144,7 @@ class MatcherFlann(Config):
 class MatcherBF(Config):
     name: Literal["BFMatcher"] = "BFMatcher"
     value: Literal["BFMatcher"] = "BFMatcher"
+
     type: Literal["string"] = "string"
     field: Literal["option"] = "option"
 
@@ -160,7 +168,7 @@ class Matcher(Config):
 
 
 # ============================================================
-# VISUALIZATION MATCHES
+# VISUALIZATION MATCHES VALUE
 # ============================================================
 
 class VisualizationMatchesValue(Config):
@@ -169,7 +177,7 @@ class VisualizationMatchesValue(Config):
     ] = "VisualizationMatchesValue"
 
     value: int = Field(
-        default=20,
+        default=50,
         ge=1,
         le=100000
     )
@@ -179,10 +187,15 @@ class VisualizationMatchesValue(Config):
 
     class Config:
         title = "Visualization Matches Value"
+
         json_schema_extra = {
             "shortDescription": "Maximum number of matches to draw."
         }
 
+
+# ============================================================
+# VISUALIZATION MATCHES ENABLED
+# ============================================================
 
 class VisualizationMatchesEnabled(Config):
     name: Literal[
@@ -202,21 +215,28 @@ class VisualizationMatchesEnabled(Config):
         title = "Enabled"
 
 
+# ============================================================
+# VISUALIZATION MATCHES DISABLED
+# ============================================================
+
 class VisualizationMatchesDisabled(Config):
     name: Literal[
         "VisualizationMatchesDisabled"
     ] = "VisualizationMatchesDisabled"
 
-    value: Literal[
-        "VisualizationMatchesDisabled"
-    ] = "VisualizationMatchesDisabled"
+    # -1 = unlimited / draw all matches
+    value: int = -1
 
-    type: Literal["string"] = "string"
+    type: Literal["number"] = "number"
     field: Literal["option"] = "option"
 
     class Config:
         title = "Disabled"
 
+
+# ============================================================
+# VISUALIZATION MATCHES CONFIG
+# ============================================================
 
 class ConfigVisualizationMatches(Config):
     name: Literal[
@@ -233,6 +253,7 @@ class ConfigVisualizationMatches(Config):
 
     class Config:
         title = "Visualization Matches"
+
         json_schema_extra = {
             "shortDescription": "Limit the number of matches drawn."
         }
@@ -250,7 +271,7 @@ class SiftComparisonTestConfigs(Configs):
 
 
 # ============================================================
-# INPUT / OUTPUT MODELS
+# INPUTS
 # ============================================================
 
 class SiftComparisonTestInputs(Inputs):
@@ -260,10 +281,18 @@ class SiftComparisonTestInputs(Inputs):
     InputVisualization2: InputVisualization2
 
 
+# ============================================================
+# OUTPUTS
+# ============================================================
+
 class SiftComparisonTestOutputs(Outputs):
     OutputDetections: OutputDetections
     OutputVisualization: OutputVisualization
 
+
+# ============================================================
+# REQUEST
+# ============================================================
 
 class SiftComparisonTestRequest(Request):
     inputs: Optional[SiftComparisonTestInputs] = None
@@ -275,16 +304,19 @@ class SiftComparisonTestRequest(Request):
         }
 
 
+# ============================================================
+# RESPONSE
+# ============================================================
+
 class SiftComparisonTestResponse(Response):
     outputs: SiftComparisonTestOutputs
 
 
 # ============================================================
-# EXECUTOR
+# EXECUTOR MODEL
 # ============================================================
 
 class SiftComparisonTest(Config):
-
     name: Literal["SiftComparisonTest"] = "SiftComparisonTest"
 
     value: Union[
@@ -306,8 +338,11 @@ class SiftComparisonTest(Config):
         }
 
 
-class ConfigExecutor(Config):
+# ============================================================
+# EXECUTOR CONFIG
+# ============================================================
 
+class ConfigExecutor(Config):
     name: Literal["ConfigExecutor"] = "ConfigExecutor"
 
     value: SiftComparisonTest
@@ -324,15 +359,18 @@ class ConfigExecutor(Config):
 
 
 # ============================================================
-# PACKAGE
+# PACKAGE CONFIGS
 # ============================================================
 
 class PackageConfigs(Configs):
     executor: ConfigExecutor
 
 
-class PackageModel(Package):
+# ============================================================
+# PACKAGE
+# ============================================================
 
+class PackageModel(Package):
     name: Literal["SiftComparisonTest"] = "SiftComparisonTest"
 
     configs: PackageConfigs
