@@ -20,7 +20,7 @@ from sdks.novavision.src.base.model import (
 
 class InputSIFTOutput1(Input):
     name: Literal["InputSIFTOutput1"] = "InputSIFTOutput1"
-    value: Optional[Any]
+    value: Optional[Any] = None
     type: Literal["object"] = "object"
 
     class Config:
@@ -29,7 +29,7 @@ class InputSIFTOutput1(Input):
 
 class InputSIFTOutput2(Input):
     name: Literal["InputSIFTOutput2"] = "InputSIFTOutput2"
-    value: Optional[Any]
+    value: Optional[Any] = None
     type: Literal["object"] = "object"
 
     class Config:
@@ -38,7 +38,7 @@ class InputSIFTOutput2(Input):
 
 class InputVisualization1(Input):
     name: Literal["InputVisualization1"] = "InputVisualization1"
-    value: Optional[Image]
+    value: Optional[Image] = None
     type: Literal["object"] = "object"
 
     class Config:
@@ -47,7 +47,7 @@ class InputVisualization1(Input):
 
 class InputVisualization2(Input):
     name: Literal["InputVisualization2"] = "InputVisualization2"
-    value: Optional[Image]
+    value: Optional[Image] = None
     type: Literal["object"] = "object"
 
     class Config:
@@ -60,7 +60,7 @@ class InputVisualization2(Input):
 
 class OutputDetections(Output):
     name: Literal["OutputDetections"] = "OutputDetections"
-    value: Optional[Any]
+    value: Optional[Any] = None
     type: Literal["list"] = "list"
 
     class Config:
@@ -69,7 +69,7 @@ class OutputDetections(Output):
 
 class OutputVisualization(Output):
     name: Literal["OutputVisualization"] = "OutputVisualization"
-    value: Optional[Image]
+    value: Optional[Image] = None
     type: Literal["object"] = "object"
 
     class Config:
@@ -141,7 +141,7 @@ class Matcher(Config):
         title = "Matcher Algorithm"
 
 
-class SIFTComparisonConfigs(Configs):
+class SiftComparisonTestConfigs(Configs):
     GoodMatchesThreshold: GoodMatchesThreshold
     RatioThreshold: RatioThreshold
     Matcher: Matcher
@@ -151,21 +151,21 @@ class SIFTComparisonConfigs(Configs):
 # INPUT / OUTPUT MODELS
 # ============================================================
 
-class SIFTComparisonInputs(Inputs):
-    InputVisualization1: InputVisualization1
+class SiftComparisonTestInputs(Inputs):
     InputSIFTOutput1: InputSIFTOutput1
     InputSIFTOutput2: InputSIFTOutput2
+    InputVisualization1: InputVisualization1
     InputVisualization2: InputVisualization2
 
 
-class SIFTComparisonOutputs(Outputs):
+class SiftComparisonTestOutputs(Outputs):
     OutputDetections: OutputDetections
     OutputVisualization: OutputVisualization
 
 
-class SIFTComparisonRequest(Request):
-    inputs: Optional[SIFTComparisonInputs]
-    configs: SIFTComparisonConfigs
+class SiftComparisonTestRequest(Request):
+    inputs: Optional[SiftComparisonTestInputs]
+    configs: SiftComparisonTestConfigs
 
     class Config:
         json_schema_extra = {
@@ -173,28 +173,28 @@ class SIFTComparisonRequest(Request):
         }
 
 
-class SIFTComparisonResponse(Response):
-    outputs: SIFTComparisonOutputs
+class SiftComparisonTestResponse(Response):
+    outputs: SiftComparisonTestOutputs
 
 
 # ============================================================
 # EXECUTOR
 # ============================================================
 
-class SIFTComparison(Config):
+class SiftComparisonTest(Config):
 
-    name: Literal["SIFTComparison"] = "SIFTComparison"
+    name: Literal["SiftComparisonTest"] = "SiftComparisonTest"
 
     value: Union[
-        SIFTComparisonRequest,
-        SIFTComparisonResponse
+        SiftComparisonTestRequest,
+        SiftComparisonTestResponse
     ]
 
     type: Literal["object"] = "object"
     field: Literal["option"] = "option"
 
     class Config:
-        title = "SIFT Comparison"
+        title = "SIFT Comparison Test"
 
         json_schema_extra = {
             "target": {
@@ -208,7 +208,7 @@ class ConfigExecutor(Config):
 
     name: Literal["ConfigExecutor"] = "ConfigExecutor"
 
-    value: Union[SIFTComparison]
+    value: SiftComparisonTest
 
     type: Literal["executor"] = "executor"
     field: Literal["dependentDropdownlist"] = "dependentDropdownlist"
@@ -231,7 +231,7 @@ class PackageConfigs(Configs):
 
 class PackageModel(Package):
 
-    name: Literal["SIFTComparison"] = "SIFTComparison"
+    name: Literal["SiftComparisonTest"] = "SiftComparisonTest"
 
     configs: PackageConfigs
 

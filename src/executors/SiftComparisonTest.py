@@ -20,16 +20,16 @@ from sdks.novavision.src.base.model import (
 from sdks.novavision.src.media.image import Image
 from sdks.novavision.src.helper.executor import Executor
 
-from components.SIFTComparison.src.utils.response import (
-    build_response_sift_comparison
+from components.SiftComparisonTest.src.utils.response import (
+    build_response_sift_comparison_test
 )
 
-from components.SIFTComparison.src.models.PackageModel import (
+from components.SiftComparisonTest.src.models.PackageModel import (
     PackageModel
 )
 
 
-class SIFTComparison(Component):
+class SiftComparisonTest(Component):
 
     def __init__(self, request, bootstrap):
 
@@ -366,7 +366,7 @@ class SIFTComparison(Component):
 
                 self.output_visualization = None
 
-                return build_response_sift_comparison(
+                return build_response_sift_comparison_test(
                     context=self
                 )
 
@@ -605,7 +605,7 @@ class SIFTComparison(Component):
         # RESPONSE
         # ====================================================
 
-        return build_response_sift_comparison(
+        return build_response_sift_comparison_test(
             context=self
         )
 
