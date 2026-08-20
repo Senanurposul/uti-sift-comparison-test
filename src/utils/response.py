@@ -1,5 +1,4 @@
 from sdks.novavision.src.helper.package import PackageHelper
-
 from components.SiftComparisonTest.src.models.PackageModel import (
     PackageModel,
     PackageConfigs,
@@ -8,72 +7,27 @@ from components.SiftComparisonTest.src.models.PackageModel import (
     SiftComparisonTestResponse,
     SiftComparisonTestOutputs,
     OutputDetections,
-    Visualization1,
-    Visualization2,
-    VisualizationMatches,
+    OutputMatchesImage,
 )
 
 
 def build_response_sift_comparison_test(context):
+    output_detections = OutputDetections(value=context.output_detections)
 
-    # --------------------------------------------------------
-    # Output Detections
-    # --------------------------------------------------------
+    outputs_dict = {
+        "OutputDetections": output_detections,
+    }
 
-    output_detections = OutputDetections(
-        value=context.output_detections
-    )
+    # Eğer görselleştirme üretildiyse yanıta eklenir
+    if hasattr(context, "output_matches_image") and context.output_matches_image is not None:
+        outputs_dict["OutputMatchesImage"] = OutputMatchesImage(
+            value=context.output_matches_image
+        )
 
-    # --------------------------------------------------------
-    # Visualization outputs
-    # --------------------------------------------------------
-
-    visualization_1 = Visualization1(
-        value=context.visualization_1
-    )
-
-    visualization_2 = Visualization2(
-        value=context.visualization_2
-    )
-
-    visualization_matches = VisualizationMatches(
-        value=context.visualization_matches
-    )
-
-    # --------------------------------------------------------
-    # Outputs
-    # --------------------------------------------------------
-
-    outputs = SiftComparisonTestOutputs(
-        OutputDetections=output_detections,
-        Visualization1=visualization_1,
-        Visualization2=visualization_2,
-        VisualizationMatches=visualization_matches
-    )
-
-    # --------------------------------------------------------
-    # Response
-    # --------------------------------------------------------
-
-    response = SiftComparisonTestResponse(
-        outputs=outputs
-    )
-
-    executor = SiftComparisonTest(
-        value=response
-    )
-
-    configExecutor = ConfigExecutor(
-        value=executor
-    )
-
-    packageConfigs = PackageConfigs(
-        executor=configExecutor
-    )
-
-    package = PackageHelper(
-        packageModel=PackageModel,
-        packageConfigs=packageConfigs
-    )
-
+    outputs = SiftComparisonTestOutputs(**outputs_dict)
+    response = SiftComparisonTestResponse(outputs=outputs)
+    executor = SiftComparisonTest(value=response)
+    configExecutor = ConfigExecutor(value=executor)
+    packageConfigs = PackageConfigs(executor=configExecutor)
+    package = PackageHelper(packageModel=PackageModel, packageConfigs=packageConfigs)
     return package.build_model(context)
