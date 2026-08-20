@@ -1,4 +1,4 @@
-from typing import Optional, Union, Literal, Any
+from typing import Optional, Union, Literal, Any, List
 
 from sdks.novavision.src.base.model import (
     Package,
@@ -38,7 +38,7 @@ class InputSIFTOutput2(Input):
 
 class InputImage1(Input):
     name: Literal["InputImage1"] = "InputImage1"
-    value: Image
+    value: Union[Image, List[Image]]
     type: Literal["object"] = "object"
 
     class Config:
@@ -47,7 +47,7 @@ class InputImage1(Input):
 
 class InputImage2(Input):
     name: Literal["InputImage2"] = "InputImage2"
-    value: Image
+    value: Union[Image, List[Image]]
     type: Literal["object"] = "object"
 
     class Config:
@@ -154,7 +154,6 @@ class SiftComparisonTestConfigs(Configs):
 class SiftComparisonTestInputs(Inputs):
     InputSIFTOutput1: InputSIFTOutput1
     InputSIFTOutput2: InputSIFTOutput2
-
     InputImage1: InputImage1
     InputImage2: InputImage2
 
@@ -165,7 +164,7 @@ class SiftComparisonTestOutputs(Outputs):
 
 
 class SiftComparisonTestRequest(Request):
-    inputs: Optional[SiftComparisonTestInputs]
+    inputs: Optional[SiftComparisonTestInputs] = None
     configs: SiftComparisonTestConfigs
 
     class Config:
