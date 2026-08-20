@@ -79,12 +79,16 @@ class OutputVisualization(Output):
 
 
 # ============================================================
-# CONFIG - GOOD MATCHES THRESHOLD
+# GOOD MATCHES THRESHOLD
 # ============================================================
 
 class GoodMatchesThreshold(Config):
     name: Literal["GoodMatchesThreshold"] = "GoodMatchesThreshold"
-    value: int = Field(default=50, ge=1, le=100000)
+    value: int = Field(
+        default=50,
+        ge=1,
+        le=100000
+    )
     type: Literal["number"] = "number"
     field: Literal["textInput"] = "textInput"
 
@@ -96,12 +100,16 @@ class GoodMatchesThreshold(Config):
 
 
 # ============================================================
-# CONFIG - RATIO THRESHOLD
+# RATIO THRESHOLD
 # ============================================================
 
 class RatioThreshold(Config):
     name: Literal["RatioThreshold"] = "RatioThreshold"
-    value: float = Field(default=0.7, ge=0.0, le=1.0)
+    value: float = Field(
+        default=0.7,
+        ge=0.0,
+        le=1.0
+    )
     type: Literal["number"] = "number"
     field: Literal["textInput"] = "textInput"
 
@@ -113,7 +121,7 @@ class RatioThreshold(Config):
 
 
 # ============================================================
-# CONFIG - MATCHER
+# MATCHER
 # ============================================================
 
 class MatcherFlann(Config):
@@ -152,7 +160,7 @@ class Matcher(Config):
 
 
 # ============================================================
-# CONFIG - VISUALIZATION MATCHES
+# VISUALIZATION MATCHES
 # ============================================================
 
 class VisualizationMatchesValue(Config):
@@ -161,7 +169,7 @@ class VisualizationMatchesValue(Config):
     ] = "VisualizationMatchesValue"
 
     value: int = Field(
-        default=50,
+        default=20,
         ge=1,
         le=100000
     )
@@ -199,9 +207,11 @@ class VisualizationMatchesDisabled(Config):
         "VisualizationMatchesDisabled"
     ] = "VisualizationMatchesDisabled"
 
-    value: int = 0
+    value: Literal[
+        "VisualizationMatchesDisabled"
+    ] = "VisualizationMatchesDisabled"
 
-    type: Literal["number"] = "number"
+    type: Literal["string"] = "string"
     field: Literal["option"] = "option"
 
     class Config:
@@ -270,10 +280,11 @@ class SiftComparisonTestResponse(Response):
 
 
 # ============================================================
-# EXECUTOR MODEL
+# EXECUTOR
 # ============================================================
 
 class SiftComparisonTest(Config):
+
     name: Literal["SiftComparisonTest"] = "SiftComparisonTest"
 
     value: Union[
@@ -296,6 +307,7 @@ class SiftComparisonTest(Config):
 
 
 class ConfigExecutor(Config):
+
     name: Literal["ConfigExecutor"] = "ConfigExecutor"
 
     value: SiftComparisonTest
@@ -320,6 +332,7 @@ class PackageConfigs(Configs):
 
 
 class PackageModel(Package):
+
     name: Literal["SiftComparisonTest"] = "SiftComparisonTest"
 
     configs: PackageConfigs
