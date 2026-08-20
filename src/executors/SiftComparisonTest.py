@@ -1,27 +1,17 @@
+son
 import os
 import sys
 import json
 import cv2
 import numpy as np
 
-print("### SIFT COMPARISON TEST VERSION 2026-08-20 ###")
-
-
-# ============================================================
-# ROOT PATH
-# ============================================================
-
+# Projenin root dizinine ulaşabilmek için path ekleniyor.
 sys.path.append(
     os.path.join(
         os.path.dirname(__file__),
         '../../../../'
     )
 )
-
-
-# ============================================================
-# NOVAVISION IMPORTS
-# ============================================================
 
 from sdks.novavision.src.base.component import Component
 from sdks.novavision.src.base.model import (
@@ -40,31 +30,32 @@ from components.SiftComparisonTest.src.models.PackageModel import (
 )
 
 
-# ============================================================
-# SIFT COMPARISON COMPONENT
-# ============================================================
-
 class SiftComparisonTest(Component):
 
     def __init__(self, request, bootstrap):
         super().__init__(request, bootstrap)
 
-        # Request'i PackageModel ile doğruluyoruz.
+        # Gelen request'i PackageModel ile doğruluyoruz.
         self.request.model = PackageModel(
             **self.request.data
         )
 
-        # Minimum good match sayısı.
+        # Match kabul edilmesi için gereken
+        # minimum good match sayısı.
         self.good_matches_threshold = self.request.get_param(
             "GoodMatchesThreshold"
         )
 
-        # Lowe Ratio Test threshold.
+        # Lowe Ratio Test threshold değeri.
         self.ratio_threshold = self.request.get_param(
             "RatioThreshold"
         )
 
-        # Matcher seçimi.
+        # Kullanılacak matcher.
+        # Değer:
+        # "FlannBasedMatcher"
+        # veya
+        # "BFMatcher"
         self.matcher = self.request.get_param(
             "Matcher"
         )
@@ -79,37 +70,21 @@ class SiftComparisonTest(Component):
             "InputSIFTOutput2"
         )
 
-
-    # ========================================================
-    # BOOTSTRAP
-    # ========================================================
-
     @staticmethod
     def bootstrap(config: dict) -> dict:
         return {}
 
-
-    # ========================================================
-    # SIFT OUTPUT PARSING
-    # ========================================================
-
-    def _extract_keypoints_and_descriptors(
-        self,
-        sift_output
-    ):
+    def _extract_keypoints_and_descriptors(self, sift_output):
         """
-        SIFT output'undan:
-
-        - keypoint koordinatlarını
-        - descriptor'ları
-
-        ayırır.
+        SIFT output'undan keypoint koordinatlarını
+        ve descriptor'ları ayırır.
         """
 
         keypoints_dicts = []
         descriptors = []
 
-        # JSON string geldiyse Python objesine çeviriyoruz.
+        # Input JSON string olarak geldiyse Python
+        # objesine dönüştürüyoruz.
         if isinstance(sift_output, str):
             sift_output = json.loads(sift_output)
 
@@ -119,18 +94,17 @@ class SiftComparisonTest(Component):
                 "SIFT output must be a list."
             )
 
-        # Detection'ların içerisindeki keypoint'leri
-        # topluyoruz.
+        # Her detection içerisindeki keypoint'leri
+        # ve descriptor'ları topluyoruz.
         for detection in sift_output:
 
             for kp in detection.get("keyPoints", []):
 
                 # Descriptor yoksa bu keypoint'i
-                # matching işlemine almıyoruz.
+                # matching işlemine dahil etmiyoruz.
                 if "descriptor" not in kp:
                     continue
 
-                # Keypoint koordinatlarını saklıyoruz.
                 keypoints_dicts.append(
                     {
                         "pt": (
@@ -140,12 +114,12 @@ class SiftComparisonTest(Component):
                     }
                 )
 
-                # Descriptor'ı saklıyoruz.
                 descriptors.append(
                     kp["descriptor"]
                 )
 
-        # Descriptor bulunamadıysa boş matris.
+        # Hiç descriptor bulunmadıysa boş descriptor
+        # matrisi döndürüyoruz.
         if not descriptors:
             return (
                 keypoints_dicts,
@@ -155,7 +129,8 @@ class SiftComparisonTest(Component):
                 )
             )
 
-        # OpenCV için float32 kullanıyoruz.
+        # OpenCV matcher'ları için descriptor'ların
+        # float32 olması gerekiyor.
         descriptors = np.asarray(
             descriptors,
             dtype=np.float32
@@ -166,12 +141,11 @@ class SiftComparisonTest(Component):
             descriptors
         )
 
-
-    # ========================================================
-    # NO MATCH RESULT
-    # ========================================================
-
     def _no_match_result(self):
+        """
+        Yeterli descriptor bulunmadığında
+        kullanılacak NoMatch sonucu.
+        """
 
         return [
             Detection(
@@ -185,17 +159,12 @@ class SiftComparisonTest(Component):
             )
         ]
 
-
-    # ========================================================
-    # RUN
-    # ========================================================
-
     def run(self):
 
         try:
 
             # ------------------------------------------------
-            # 1. SIFT output'larını alıyoruz.
+            # 1. SIFT output'larını ayırıyoruz.
             # ------------------------------------------------
 
             (
@@ -212,41 +181,10 @@ class SiftComparisonTest(Component):
                 self.sift_output_2
             )
 
-
             # ------------------------------------------------
-            # 2. DEBUG
-            # ------------------------------------------------
-
-            print("")
-            print("========================================")
-            print("       SIFT COMPARISON DEBUG")
-            print("========================================")
-            print(
-                "GoodMatchesThreshold:",
-                self.good_matches_threshold
-            )
-            print(
-                "RatioThreshold:",
-                self.ratio_threshold
-            )
-            print(
-                "Matcher:",
-                self.matcher
-            )
-            print(
-                "Descriptor1 count:",
-                len(descriptors1)
-            )
-            print(
-                "Descriptor2 count:",
-                len(descriptors2)
-            )
-            print("========================================")
-            print("")
-
-
-            # ------------------------------------------------
-            # 3. En az 2 descriptor gerekiyor.
+            # 2. knnMatch(k=2) kullanacağımız için
+            # iki görüntüde de en az 2 descriptor
+            # bulunması gerekiyor.
             # ------------------------------------------------
 
             if (
@@ -262,15 +200,17 @@ class SiftComparisonTest(Component):
                     context=self
                 )
 
-
             # ------------------------------------------------
-            # 4. MATCHER
+            # 3. Matcher oluşturuluyor.
+            #
+            # Burada FLANN ve BFMatcher'ı açıkça
+            # birbirinden ayırıyoruz.
             # ------------------------------------------------
 
             if self.matcher == "FlannBasedMatcher":
 
                 # SIFT descriptor'ları float olduğu için
-                # FLANN + KD-Tree kullanıyoruz.
+                # FLANN'de KD-Tree kullanıyoruz.
                 index_params = {
                     "algorithm": 1,
                     "trees": 5
@@ -287,8 +227,10 @@ class SiftComparisonTest(Component):
 
             elif self.matcher == "BFMatcher":
 
-                # SIFT descriptor'ları için
-                # Euclidean distance / L2 norm.
+                # BFMatcher bütün descriptor'ları
+                # brute-force olarak karşılaştırır.
+                #
+                # SIFT descriptor'ları için L2 norm kullanılır.
                 matcher = cv2.BFMatcher(
                     cv2.NORM_L2,
                     crossCheck=False
@@ -296,13 +238,17 @@ class SiftComparisonTest(Component):
 
             else:
 
+                # Desteklenmeyen bir matcher gelirse
+                # sessizce FLANN kullanmak yerine hata veriyoruz.
                 raise ValueError(
                     f"Unsupported matcher: {self.matcher}"
                 )
 
-
             # ------------------------------------------------
-            # 5. KNN MATCHING
+            # 4. Her descriptor için en yakın 2 descriptor'ı
+            # buluyoruz.
+            #
+            # k=2 -> Lowe Ratio Test için gerekli.
             # ------------------------------------------------
 
             matches = matcher.knnMatch(
@@ -311,16 +257,13 @@ class SiftComparisonTest(Component):
                 k=2
             )
 
-
-            # ------------------------------------------------
-            # 6. LOWE RATIO TEST
-            # ------------------------------------------------
-
+            # Lowe Ratio Test'i geçen eşleşmeler.
             good_matches = []
 
             for match_pair in matches:
 
-                # İki sonuç yoksa ratio testi yapılamaz.
+                # İki eşleşme yoksa ratio testi
+                # yapılamaz.
                 if len(match_pair) < 2:
                     continue
 
@@ -333,33 +276,23 @@ class SiftComparisonTest(Component):
                 ):
                     good_matches.append(m)
 
-
             # ------------------------------------------------
-            # 7. GOOD MATCH COUNT
+            # 5. Good match sayısını hesaplıyoruz.
             # ------------------------------------------------
 
             good_matches_count = len(
                 good_matches
             )
 
-            print(
-                "Good matches count:",
-                good_matches_count
-            )
-
-
-            # ------------------------------------------------
-            # 8. MATCH / NOMATCH
-            # ------------------------------------------------
-
+            # Threshold'a ulaşıldıysa Match.
             images_match = (
                 good_matches_count
                 >= self.good_matches_threshold
             )
 
-
             # ------------------------------------------------
-            # 9. KEYPOINTS
+            # 6. İki görüntünün keypoint'lerini
+            # tek listede birleştiriyoruz.
             # ------------------------------------------------
 
             all_keypoints_dicts = (
@@ -367,10 +300,12 @@ class SiftComparisonTest(Component):
                 + keypoints2_dicts
             )
 
+            # Image 2 keypoint'lerinin başladığı index.
             offset = len(
                 keypoints1_dicts
             )
 
+            # Novavision KeyPoints modeline dönüştürüyoruz.
             keypoints = [
                 KeyPoints(
                     cx=float(kp["pt"][0]),
@@ -380,9 +315,15 @@ class SiftComparisonTest(Component):
                 for kp in all_keypoints_dicts
             ]
 
-
             # ------------------------------------------------
-            # 10. CONNECTIONS
+            # 7. Good match'leri Connection nesnelerine
+            # dönüştürüyoruz.
+            #
+            # queryIdx -> image 1
+            # trainIdx -> image 2
+            #
+            # Image 2 keypoint'leri listenin devamında
+            # olduğu için offset ekliyoruz.
             # ------------------------------------------------
 
             connections = [
@@ -393,20 +334,22 @@ class SiftComparisonTest(Component):
                 for m in good_matches
             ]
 
-
             # ------------------------------------------------
-            # 11. FINAL DETECTION
+            # 8. Final Detection oluşturuluyor.
             # ------------------------------------------------
 
             self.output_detections = [
                 Detection(
                     boundingBox=None,
 
+                    # İki görüntünün keypoint'leri.
                     keyPoints=keypoints,
 
+                    # Good match bağlantıları.
                     connections=connections,
 
-                    # Good match sayısı.
+                    # Good match sayısını confidence
+                    # olarak kullanıyoruz.
                     confidence=float(
                         good_matches_count
                     ),
@@ -429,10 +372,10 @@ class SiftComparisonTest(Component):
                 )
             ]
 
-
         except Exception as e:
 
-            # Gerçek hatayı gizlemiyoruz.
+            # Gerçek bir kod hatasını NoMatch olarak
+            # gizlemek yerine terminal/log'a yazıyoruz.
             print(
                 "SIFT Comparison Error:",
                 repr(e)
@@ -440,359 +383,17 @@ class SiftComparisonTest(Component):
 
             raise
 
-
-        # ----------------------------------------------------
-        # 12. RESPONSE
-        # ----------------------------------------------------
+        # ------------------------------------------------
+        # 9. Response oluşturuluyor.
+        # ------------------------------------------------
 
         return build_response_sift_comparison_test(
             context=self
         )
 
 
-# ============================================================
-# EXECUTOR
-# ============================================================
-
+# Executor'ın başlatılması.
 if __name__ == "__main__":
-
     Executor(
         sys.argv[1]
     ).run()
-
-
-
-
-son package model
-from typing import Optional, Union, Literal, Any
-
-from sdks.novavision.src.base.model import (
-    Package,
-    Inputs,
-    Outputs,
-    Configs,
-    Response,
-    Request,
-    Output,
-    Input,
-    Config
-)
-
-
-# ============================================================
-# INPUTS
-# ============================================================
-
-class InputSIFTOutput1(Input):
-    name: Literal["InputSIFTOutput1"] = "InputSIFTOutput1"
-    value: Optional[Any]
-    type: Literal["object"] = "object"
-
-    class Config:
-        title = "SIFT Output 1"
-
-
-class InputSIFTOutput2(Input):
-    name: Literal["InputSIFTOutput2"] = "InputSIFTOutput2"
-    value: Optional[Any]
-    type: Literal["object"] = "object"
-
-    class Config:
-        title = "SIFT Output 2"
-
-
-# ============================================================
-# OUTPUTS
-# ============================================================
-
-class OutputDetections(Output):
-    name: Literal["OutputDetections"] = "OutputDetections"
-    value: Optional[Any]
-    type: Literal["list"] = "list"
-
-    class Config:
-        title = "Output Detections"
-
-
-# ============================================================
-# CONFIGS
-# ============================================================
-
-class GoodMatchesThreshold(Config):
-    """
-    Minimum number of good matches required
-    to classify two images as Match.
-    """
-
-    name: Literal["GoodMatchesThreshold"] = "GoodMatchesThreshold"
-    value: int = 50
-    type: Literal["number"] = "number"
-    field: Literal["textInput"] = "textInput"
-
-    class Config:
-        title = "Good Matches Threshold"
-        json_schema_extra = {
-            "shortDescription": "Minimum good matches required"
-        }
-
-
-class RatioThreshold(Config):
-    """
-    Lowe's Ratio Test threshold.
-
-    Lower value:
-        More strict matching.
-
-    Higher value:
-        More tolerant matching.
-    """
-
-    name: Literal["RatioThreshold"] = "RatioThreshold"
-    value: float = 0.7
-    type: Literal["number"] = "number"
-    field: Literal["textInput"] = "textInput"
-
-    class Config:
-        title = "Ratio Threshold"
-        json_schema_extra = {
-            "shortDescription": "Lowe's ratio test threshold"
-        }
-
-
-# ============================================================
-# MATCHER OPTIONS
-# ============================================================
-
-class MatcherFlann(Config):
-    """
-    FLANN matcher for SIFT descriptors.
-    """
-
-    name: Literal["FlannBasedMatcher"] = "FlannBasedMatcher"
-    value: Literal["FlannBasedMatcher"] = "FlannBasedMatcher"
-    type: Literal["string"] = "string"
-    field: Literal["option"] = "option"
-
-    class Config:
-        title = "FLANN Based Matcher"
-        json_schema_extra = {
-            "shortDescription": "FLANN nearest-neighbor matching"
-        }
-
-
-class MatcherBF(Config):
-    """
-    Brute Force matcher for SIFT descriptors.
-    """
-
-    name: Literal["BFMatcher"] = "BFMatcher"
-    value: Literal["BFMatcher"] = "BFMatcher"
-    type: Literal["string"] = "string"
-    field: Literal["option"] = "option"
-
-    class Config:
-        title = "Brute Force Matcher"
-        json_schema_extra = {
-            "shortDescription": "Brute-force descriptor matching"
-        }
-
-
-class Matcher(Config):
-    """
-    Select the descriptor matching algorithm.
-
-    Options:
-        - FlannBasedMatcher
-        - BFMatcher
-    """
-
-    name: Literal["Matcher"] = "Matcher"
-
-    value: Union[
-        MatcherFlann,
-        MatcherBF
-    ]
-
-    type: Literal["object"] = "object"
-    field: Literal["dropdownlist"] = "dropdownlist"
-
-    class Config:
-        title = "Matcher Algorithm"
-        json_schema_extra = {
-            "shortDescription": "Select FLANN or Brute Force"
-        }
-
-
-# ============================================================
-# CONFIG MODEL
-# ============================================================
-
-class SiftComparisonTestConfigs(Configs):
-    GoodMatchesThreshold: GoodMatchesThreshold
-    RatioThreshold: RatioThreshold
-    Matcher: Matcher
-
-
-# ============================================================
-# INPUT / OUTPUT MODELS
-# ============================================================
-
-class SiftComparisonTestInputs(Inputs):
-    InputSIFTOutput1: InputSIFTOutput1
-    InputSIFTOutput2: InputSIFTOutput2
-
-
-class SiftComparisonTestOutputs(Outputs):
-    OutputDetections: OutputDetections
-
-
-# ============================================================
-# REQUEST
-# ============================================================
-
-class SiftComparisonTestRequest(Request):
-    inputs: Optional[SiftComparisonTestInputs]
-    configs: SiftComparisonTestConfigs
-
-    class Config:
-        json_schema_extra = {
-            "target": "configs"
-        }
-
-
-# ============================================================
-# RESPONSE
-# ============================================================
-
-class SiftComparisonTestResponse(Response):
-    outputs: SiftComparisonTestOutputs
-
-
-# ============================================================
-# EXECUTOR CONFIGURATION
-# ============================================================
-
-class SiftComparisonTest(Config):
-    """
-    Compares two images using SIFT descriptors
-    received from external SIFT blocks.
-
-    The package itself does not calculate SIFT features.
-    """
-
-    name: Literal["SiftComparisonTest"] = "SiftComparisonTest"
-
-    value: Union[
-        SiftComparisonTestRequest,
-        SiftComparisonTestResponse
-    ]
-
-    type: Literal["object"] = "object"
-    field: Literal["option"] = "option"
-
-    class Config:
-        title = "SIFT Comparison"
-        json_schema_extra = {
-            "target": {
-                "value": 0
-            },
-            "shortDescription": "Feature-based image matching"
-        }
-
-
-class ConfigExecutor(Config):
-    """
-    SIFT Comparison executor.
-
-    Compares SIFT descriptors using either
-    FLANN or Brute Force matching.
-    """
-
-    name: Literal["ConfigExecutor"] = "ConfigExecutor"
-
-    value: Union[SiftComparisonTest]
-
-    type: Literal["executor"] = "executor"
-    field: Literal["dependentDropdownlist"] = "dependentDropdownlist"
-
-    class Config:
-        title = "Task"
-        json_schema_extra = {
-            "target": "value"
-        }
-
-
-# ============================================================
-# PACKAGE CONFIG
-# ============================================================
-
-class PackageConfigs(Configs):
-    executor: ConfigExecutor
-
-
-# ============================================================
-# PACKAGE MODEL
-# ============================================================
-
-class PackageModel(Package):
-    name: Literal["SiftComparisonTest"] = "SiftComparisonTest"
-    configs: PackageConfigs
-    type: Literal["component"] = "component"
-
-son response
-
-from sdks.novavision.src.helper.package import PackageHelper
-
-from components.SiftComparisonTest.src.models.PackageModel import (
-    PackageModel,
-    PackageConfigs,
-    ConfigExecutor,
-    SiftComparisonTest,
-    SiftComparisonTestResponse,
-    SiftComparisonTestOutputs,
-    OutputDetections,
-)
-
-
-def build_response_sift_comparison_test(context):
-
-    # Executor tarafından oluşturulan
-    # Detection listesini OutputDetections
-    # modeline koyuyoruz.
-    output_detections = OutputDetections(
-        value=context.output_detections
-    )
-
-    # Outputs modelini oluşturuyoruz.
-    outputs = SiftComparisonTestOutputs(
-        OutputDetections=output_detections
-    )
-
-    # Response modelini oluşturuyoruz.
-    response = SiftComparisonTestResponse(
-        outputs=outputs
-    )
-
-    # Executor response'unu oluşturuyoruz.
-    executor = SiftComparisonTest(
-        value=response
-    )
-
-    # ConfigExecutor oluşturuluyor.
-    configExecutor = ConfigExecutor(
-        value=executor
-    )
-
-    # Package config oluşturuluyor.
-    packageConfigs = PackageConfigs(
-        executor=configExecutor
-    )
-
-    # PackageHelper ile Novavision package response'u
-    # oluşturuluyor.
-    package = PackageHelper(
-        packageModel=PackageModel,
-        packageConfigs=packageConfigs
-    )
-
-    return package.build_model(context)
