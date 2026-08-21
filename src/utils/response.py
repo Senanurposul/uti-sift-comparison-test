@@ -17,15 +17,27 @@ from components.SiftComparisonTest.src.models.PackageModel import (
 def build_response_sift_comparison_test(context):
 
     outputs = SiftComparisonTestOutputs(
+
         OutputDetections=OutputDetections(
             value=context.output_detections
         ),
+
         OutputVisualization1=OutputVisualization1(
-            value=getattr(context, "output_visualization_1", None)
+            value=getattr(
+                context,
+                "output_visualization_1",
+                None
+            )
         ),
+
         OutputVisualization2=OutputVisualization2(
-            value=getattr(context, "output_visualization_2", None)
+            value=getattr(
+                context,
+                "output_visualization_2",
+                None
+            )
         ),
+
         OutputVisualizationMatches=OutputVisualizationMatches(
             value=getattr(
                 context,

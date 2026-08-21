@@ -1,5 +1,6 @@
 from typing import Optional, Union, Literal, Any
 from pydantic import Field
+
 from sdks.novavision.src.base.model import (
     Package,
     Image,
@@ -12,6 +13,7 @@ from sdks.novavision.src.base.model import (
     Input,
     Config,
 )
+
 
 # ============================================================
 # INPUTS
@@ -41,7 +43,7 @@ class InputVisualization1(Input):
     type: Literal["object"] = "object"
 
     class Config:
-        title = "Visualization Image 1"
+        title = "Visualization 1"
 
 
 class InputVisualization2(Input):
@@ -50,7 +52,7 @@ class InputVisualization2(Input):
     type: Literal["object"] = "object"
 
     class Config:
-        title = "Visualization Image 2"
+        title = "Visualization 2"
 
 
 # ============================================================
@@ -99,7 +101,13 @@ class OutputVisualizationMatches(Output):
 
 class GoodMatchesThreshold(Config):
     name: Literal["GoodMatchesThreshold"] = "GoodMatchesThreshold"
-    value: int = Field(default=50, ge=1, le=100000)
+
+    value: int = Field(
+        default=50,
+        ge=1,
+        le=100000
+    )
+
     type: Literal["number"] = "number"
     field: Literal["textInput"] = "textInput"
 
@@ -109,7 +117,13 @@ class GoodMatchesThreshold(Config):
 
 class RatioThreshold(Config):
     name: Literal["RatioThreshold"] = "RatioThreshold"
-    value: float = Field(default=0.7, ge=0.0, le=1.0)
+
+    value: float = Field(
+        default=0.7,
+        ge=0.0,
+        le=1.0
+    )
+
     type: Literal["number"] = "number"
     field: Literal["textInput"] = "textInput"
 
@@ -120,6 +134,7 @@ class RatioThreshold(Config):
 class MatcherFlann(Config):
     name: Literal["FlannBasedMatcher"] = "FlannBasedMatcher"
     value: Literal["FlannBasedMatcher"] = "FlannBasedMatcher"
+
     type: Literal["string"] = "string"
     field: Literal["option"] = "option"
 
@@ -130,6 +145,7 @@ class MatcherFlann(Config):
 class MatcherBF(Config):
     name: Literal["BFMatcher"] = "BFMatcher"
     value: Literal["BFMatcher"] = "BFMatcher"
+
     type: Literal["string"] = "string"
     field: Literal["option"] = "option"
 
@@ -139,7 +155,12 @@ class MatcherBF(Config):
 
 class Matcher(Config):
     name: Literal["Matcher"] = "Matcher"
-    value: Union[MatcherFlann, MatcherBF]
+
+    value: Union[
+        MatcherFlann,
+        MatcherBF
+    ]
+
     type: Literal["object"] = "object"
     field: Literal["dropdownlist"] = "dropdownlist"
 
@@ -147,18 +168,32 @@ class Matcher(Config):
         title = "Matcher Algorithm"
 
 
+# ============================================================
+# VISUALIZE
+# Roboflow v2 -> bool, default=False
+# ============================================================
+
 class Visualize(Config):
     name: Literal["Visualize"] = "Visualize"
+
     value: bool = False
+
     type: Literal["boolean"] = "boolean"
     field: Literal["checkbox"] = "checkbox"
 
     class Config:
         title = "Visualize"
+
         json_schema_extra = {
-            "shortDescription": "Create visualization outputs."
+            "shortDescription": (
+                "Generate keypoint and match visualizations."
+            )
         }
 
+
+# ============================================================
+# CONFIGS
+# ============================================================
 
 class SiftComparisonTestConfigs(Configs):
     GoodMatchesThreshold: GoodMatchesThreshold
@@ -168,7 +203,7 @@ class SiftComparisonTestConfigs(Configs):
 
 
 # ============================================================
-# INPUT / OUTPUT MODELS
+# INPUTS
 # ============================================================
 
 class SiftComparisonTestInputs(Inputs):
@@ -178,6 +213,10 @@ class SiftComparisonTestInputs(Inputs):
     InputVisualization2: InputVisualization2
 
 
+# ============================================================
+# OUTPUTS
+# ============================================================
+
 class SiftComparisonTestOutputs(Outputs):
     OutputDetections: OutputDetections
     OutputVisualization1: OutputVisualization1
@@ -186,7 +225,7 @@ class SiftComparisonTestOutputs(Outputs):
 
 
 # ============================================================
-# REQUEST / RESPONSE
+# REQUEST
 # ============================================================
 
 class SiftComparisonTestRequest(Request):
@@ -199,12 +238,16 @@ class SiftComparisonTestRequest(Request):
         }
 
 
+# ============================================================
+# RESPONSE
+# ============================================================
+
 class SiftComparisonTestResponse(Response):
     outputs: SiftComparisonTestOutputs
 
 
 # ============================================================
-# EXECUTOR
+# EXECUTOR MODEL
 # ============================================================
 
 class SiftComparisonTest(Config):
@@ -220,6 +263,7 @@ class SiftComparisonTest(Config):
 
     class Config:
         title = "SIFT Comparison Test"
+
         json_schema_extra = {
             "target": {
                 "value": 0
@@ -228,24 +272,41 @@ class SiftComparisonTest(Config):
         }
 
 
+# ============================================================
+# EXECUTOR CONFIG
+# ============================================================
+
 class ConfigExecutor(Config):
     name: Literal["ConfigExecutor"] = "ConfigExecutor"
+
     value: SiftComparisonTest
+
     type: Literal["executor"] = "executor"
     field: Literal["dependentDropdownlist"] = "dependentDropdownlist"
 
     class Config:
         title = "Task"
+
         json_schema_extra = {
             "target": "value"
         }
 
 
+# ============================================================
+# PACKAGE CONFIGS
+# ============================================================
+
 class PackageConfigs(Configs):
     executor: ConfigExecutor
 
 
+# ============================================================
+# PACKAGE
+# ============================================================
+
 class PackageModel(Package):
     name: Literal["SiftComparisonTest"] = "SiftComparisonTest"
+
     configs: PackageConfigs
+
     type: Literal["component"] = "component"
