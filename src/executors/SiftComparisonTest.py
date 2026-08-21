@@ -1,18 +1,27 @@
+from typing import Optional, Union, Literal, Any
+
 import os
 import sys
 import json
+
 import cv2
 import numpy as np
 
 sys.path.append(
     os.path.join(
         os.path.dirname(__file__),
-        '../../../../'
+        "../../../../"
     )
 )
 
 from sdks.novavision.src.media.image import Image
 from sdks.novavision.src.base.component import Component
+from sdks.novavision.src.base.model import (
+    KeyPoints,
+    Detection,
+    Connection
+)
+
 from sdks.novavision.src.helper.executor import Executor
 
 from components.SiftComparisonTest.src.utils.response import (
@@ -27,15 +36,19 @@ from components.SiftComparisonTest.src.models.PackageModel import (
 class SiftComparisonTest(Component):
 
     def __init__(self, request, bootstrap):
-        super().__init__(request, bootstrap)
+
+        super().__init__(
+            request,
+            bootstrap
+        )
 
         self.request.model = PackageModel(
             **self.request.data
         )
 
-        # ------------------------------------------------
-        # Existing configs
-        # ------------------------------------------------
+        # ====================================================
+        # CONFIGS
+        # ====================================================
 
         self.good_matches_threshold = self.request.get_param(
             "GoodMatchesThreshold"
@@ -49,15 +62,47 @@ class SiftComparisonTest(Component):
             "Matcher"
         )
 
-        # Roboflow v2:
-        # visualize = False by default
-        self.visualize = self.request.get_param(
-            "Visualize"
+        # ====================================================
+        # VISUALIZATION CONFIG
+        # ====================================================
+
+        self.visualization_matches = self.request.get_param(
+            "ConfigVisualizationMatches"
         )
 
-        # ------------------------------------------------
-        # Existing inputs
-        # ------------------------------------------------
+        self.visualization_matches_value = self.request.get_param(
+            "VisualizationMatchesValue"
+        )
+
+        # ====================================================
+        # DEFAULTS
+        # ====================================================
+
+        if self.visualization_matches is None:
+            self.visualization_matches = "Disabled"
+
+        if self.visualization_matches_value is None:
+            self.visualization_matches_value = 20
+
+        # ====================================================
+        # DEBUG
+        # ====================================================
+
+        print(
+            "SIFTCOMPARISONTEST - VISUALIZATION CONFIG RAW:",
+            repr(self.visualization_matches),
+            flush=True
+        )
+
+        print(
+            "SIFTCOMPARISONTEST - VISUALIZATION VALUE RAW:",
+            repr(self.visualization_matches_value),
+            flush=True
+        )
+
+        # ====================================================
+        # SIFT OUTPUT INPUTS
+        # ====================================================
 
         self.sift_output_1 = self.request.get_param(
             "InputSIFTOutput1"
@@ -67,6 +112,10 @@ class SiftComparisonTest(Component):
             "InputSIFTOutput2"
         )
 
+        # ====================================================
+        # VISUALIZATION INPUTS
+        # ====================================================
+
         self.visualization_input_1 = self.request.get_param(
             "InputVisualization1"
         )
@@ -75,59 +124,25 @@ class SiftComparisonTest(Component):
             "InputVisualization2"
         )
 
-        # ------------------------------------------------
-        # Outputs
-        # ------------------------------------------------
+        # ====================================================
+        # OUTPUTS
+        # ====================================================
 
         self.output_detections = []
 
-        self.output_visualization_1 = None
-        self.output_visualization_2 = None
-        self.output_visualization_matches = None
+        self.output_visualization = None
+
+    # ========================================================
+    # BOOTSTRAP
+    # ========================================================
 
     @staticmethod
     def bootstrap(config: dict) -> dict:
         return {}
 
-    # ====================================================
-    # VISUALIZE
-    # ====================================================
-
-    def _visualization_enabled(self):
-
-        value = self.visualize
-
-        if isinstance(value, bool):
-            return value
-
-        if isinstance(value, str):
-            return value.strip().lower() in (
-                "true",
-                "1",
-                "yes"
-            )
-
-        nested_value = getattr(
-            value,
-            "value",
-            None
-        )
-
-        if isinstance(nested_value, bool):
-            return nested_value
-
-        if isinstance(nested_value, str):
-            return nested_value.strip().lower() in (
-                "true",
-                "1",
-                "yes"
-            )
-
-        return False
-
-    # ====================================================
-    # SIFT OUTPUT PARSING
-    # ====================================================
+    # ========================================================
+    # EXTRACT SIFT KEYPOINTS + DESCRIPTORS
+    # ========================================================
 
     def _extract_keypoints_and_descriptors(
         self,
@@ -137,562 +152,1113 @@ class SiftComparisonTest(Component):
         keypoints_dicts = []
         descriptors = []
 
-        if isinstance(sift_output, str):
+        # ====================================================
+        # STRING -> JSON
+        # ====================================================
+
+        if isinstance(
+            sift_output,
+            str
+        ):
+
             sift_output = json.loads(
                 sift_output
             )
 
-        if isinstance(sift_output, dict):
+        # ====================================================
+        # OUTPUT WRAPPER
+        # ====================================================
+
+        if isinstance(
+            sift_output,
+            dict
+        ):
 
             if "value" in sift_output:
-                sift_output = sift_output["value"]
+
+                sift_output = sift_output[
+                    "value"
+                ]
 
             elif "detections" in sift_output:
-                sift_output = sift_output["detections"]
 
-        if not isinstance(sift_output, list):
-            raise ValueError(
-                "SIFT output must be a list."
-            )
+                sift_output = sift_output[
+                    "detections"
+                ]
 
-        for detection in sift_output:
+            elif "outputDetections" in sift_output:
 
-            for kp in detection.get(
-                "keyPoints",
-                []
-            ):
+                sift_output = sift_output[
+                    "outputDetections"
+                ]
 
-                if "descriptor" not in kp:
-                    continue
+        # ====================================================
+        # EMPTY OUTPUT
+        # ====================================================
 
-                keypoints_dicts.append(
-                    {
-                        "pt": (
-                            float(kp["cx"]),
-                            float(kp["cy"])
-                        ),
-                        "size": float(
-                            kp.get(
-                                "size",
-                                1.0
-                            )
-                        ),
-                        "angle": float(
-                            kp.get(
-                                "angle",
-                                -1
-                            )
-                        ),
-                        "response": float(
-                            kp.get(
-                                "response",
-                                0
-                            )
-                        ),
-                        "octave": int(
-                            kp.get(
-                                "octave",
-                                0
-                            )
-                        ),
-                        "class_id": int(
-                            kp.get(
-                                "classId",
-                                -1
-                            )
-                        )
-                    }
-                )
-
-                descriptors.append(
-                    kp["descriptor"]
-                )
-
-        if not descriptors:
+        if sift_output is None:
 
             return (
-                keypoints_dicts,
+                [],
                 np.empty(
                     (0, 128),
                     dtype=np.float32
                 )
             )
 
-        return (
-            keypoints_dicts,
-            np.asarray(
-                descriptors,
+        # ====================================================
+        # KEYPOINTS
+        # ====================================================
+
+        for detection in sift_output:
+
+            if not isinstance(
+                detection,
+                dict
+            ):
+                continue
+
+            if "value" in detection:
+
+                detection = detection[
+                    "value"
+                ]
+
+            keypoints = detection.get(
+                "keyPoints",
+                []
+            )
+
+            # =================================================
+            # EACH KEYPOINT
+            # =================================================
+
+            for kp in keypoints:
+
+                descriptor = kp.get(
+                    "descriptor"
+                )
+
+                if descriptor is None:
+                    continue
+
+                keypoints_dicts.append(
+                    {
+                        "pt": (
+                            float(
+                                kp["cx"]
+                            ),
+                            float(
+                                kp["cy"]
+                            )
+                        ),
+
+                        "size": max(
+                            float(
+                                kp.get(
+                                    "size",
+                                    1.0
+                                )
+                            ),
+                            1.0
+                        ),
+
+                        "angle": float(
+                            kp.get(
+                                "angle",
+                                -1.0
+                            )
+                        ),
+
+                        "response": float(
+                            kp.get(
+                                "response",
+                                0.0
+                            )
+                        ),
+
+                        "octave": int(
+                            kp.get(
+                                "octave",
+                                0
+                            )
+                        )
+                    }
+                )
+
+                descriptors.append(
+                    descriptor
+                )
+
+        # ====================================================
+        # DESCRIPTOR ARRAY
+        # ====================================================
+
+        if len(descriptors) == 0:
+
+            descriptors_array = np.empty(
+                (0, 128),
                 dtype=np.float32
             )
-        )
-
-    # ====================================================
-    # KEYPOINT VISUALIZATION
-    # ====================================================
-
-    def _create_keypoint_visualization(
-        self,
-        frame,
-        keypoints
-    ):
-
-        frame = np.asarray(frame)
-
-        if frame.size == 0:
-            raise ValueError(
-                "Visualization image is empty."
-            )
-
-        if frame.dtype != np.uint8:
-            frame = frame.astype(
-                np.uint8
-            )
-
-        cv_keypoints = []
-
-        for point in keypoints:
-
-            cv_keypoints.append(
-                cv2.KeyPoint(
-                    float(point["pt"][0]),
-                    float(point["pt"][1]),
-                    float(
-                        point.get(
-                            "size",
-                            1.0
-                        )
-                    ),
-                    float(
-                        point.get(
-                            "angle",
-                            -1
-                        )
-                    ),
-                    float(
-                        point.get(
-                            "response",
-                            0
-                        )
-                    ),
-                    int(
-                        point.get(
-                            "octave",
-                            0
-                        )
-                    ),
-                    int(
-                        point.get(
-                            "class_id",
-                            -1
-                        )
-                    )
-                )
-            )
-
-        # Same basic OpenCV operation used by Roboflow v2.
-        return cv2.drawKeypoints(
-            frame,
-            cv_keypoints,
-            None
-        )
-
-    # ====================================================
-    # MATCH VISUALIZATION
-    # ====================================================
-
-    def _create_matches_visualization(
-        self,
-        frame1,
-        frame2,
-        keypoints1,
-        keypoints2,
-        good_matches
-    ):
-
-        frame1 = np.asarray(frame1)
-        frame2 = np.asarray(frame2)
-
-        if frame1.size == 0 or frame2.size == 0:
-            raise ValueError(
-                "Visualization image is empty."
-            )
-
-        cv_keypoints1 = [
-            cv2.KeyPoint(
-                float(point["pt"][0]),
-                float(point["pt"][1]),
-                float(
-                    point.get(
-                        "size",
-                        1.0
-                    )
-                ),
-                float(
-                    point.get(
-                        "angle",
-                        -1
-                    )
-                ),
-                float(
-                    point.get(
-                        "response",
-                        0
-                    )
-                ),
-                int(
-                    point.get(
-                        "octave",
-                        0
-                    )
-                ),
-                int(
-                    point.get(
-                        "class_id",
-                        -1
-                    )
-                )
-            )
-            for point in keypoints1
-        ]
-
-        cv_keypoints2 = [
-            cv2.KeyPoint(
-                float(point["pt"][0]),
-                float(point["pt"][1]),
-                float(
-                    point.get(
-                        "size",
-                        1.0
-                    )
-                ),
-                float(
-                    point.get(
-                        "angle",
-                        -1
-                    )
-                ),
-                float(
-                    point.get(
-                        "response",
-                        0
-                    )
-                ),
-                int(
-                    point.get(
-                        "octave",
-                        0
-                    )
-                ),
-                int(
-                    point.get(
-                        "class_id",
-                        -1
-                    )
-                )
-            )
-            for point in keypoints2
-        ]
-
-        # Roboflow does NOT apply a custom visualization
-        # match-count limit.
-        #
-        # Every good match from Lowe's ratio test is drawn.
-        good_matches_for_draw = [
-            [match]
-            for match in good_matches
-        ]
-
-        if self.matcher == "BFMatcher":
-
-            draw_params = {
-                "flags":
-                    cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS
-            }
 
         else:
 
-            draw_params = {
-                "matchColor": (0, 255, 0),
-                "singlePointColor": (0, 0, 255),
-                "flags":
-                    cv2.DrawMatchesFlags_DEFAULT
-            }
+            descriptors_array = np.asarray(
+                descriptors,
+                dtype=np.float32
+            )
 
-        return cv2.drawMatchesKnn(
+        return (
+            keypoints_dicts,
+            descriptors_array
+        )
+
+    # ========================================================
+    # CREATE VISUALIZATION
+    # ========================================================
+
+    def _create_visualization(
+        self,
+        frame1,
+        frame2,
+        keypoints1_dicts,
+        keypoints2_dicts,
+        good_match_objects
+    ):
+
+        # ====================================================
+        # FRAME CHECK
+        # ====================================================
+
+        if frame1 is None:
+            raise ValueError(
+                "Visualization frame 1 is None"
+            )
+
+        if frame2 is None:
+            raise ValueError(
+                "Visualization frame 2 is None"
+            )
+
+        frame1 = np.asarray(
+            frame1
+        )
+
+        frame2 = np.asarray(
+            frame2
+        )
+
+        if frame1.size == 0:
+            raise ValueError(
+                "Visualization frame 1 is empty"
+            )
+
+        if frame2.size == 0:
+            raise ValueError(
+                "Visualization frame 2 is empty"
+            )
+
+        # ====================================================
+        # UINT8
+        # ====================================================
+
+        if frame1.dtype != np.uint8:
+
+            frame1 = frame1.astype(
+                np.uint8
+            )
+
+        if frame2.dtype != np.uint8:
+
+            frame2 = frame2.astype(
+                np.uint8
+            )
+
+        # ====================================================
+        # GRAYSCALE -> BGR
+        # ====================================================
+
+        if len(frame1.shape) == 2:
+
+            frame1 = cv2.cvtColor(
+                frame1,
+                cv2.COLOR_GRAY2BGR
+            )
+
+        if len(frame2.shape) == 2:
+
+            frame2 = cv2.cvtColor(
+                frame2,
+                cv2.COLOR_GRAY2BGR
+            )
+
+        # ====================================================
+        # OPENCV KEYPOINTS
+        # ====================================================
+
+        cv_keypoints1 = []
+
+        for kp in keypoints1_dicts:
+
+            cv_keypoints1.append(
+                cv2.KeyPoint(
+                    float(
+                        kp["pt"][0]
+                    ),
+                    float(
+                        kp["pt"][1]
+                    ),
+                    max(
+                        float(
+                            kp["size"]
+                        ),
+                        1.0
+                    )
+                )
+            )
+
+        cv_keypoints2 = []
+
+        for kp in keypoints2_dicts:
+
+            cv_keypoints2.append(
+                cv2.KeyPoint(
+                    float(
+                        kp["pt"][0]
+                    ),
+                    float(
+                        kp["pt"][1]
+                    ),
+                    max(
+                        float(
+                            kp["size"]
+                        ),
+                        1.0
+                    )
+                )
+            )
+
+        # ====================================================
+        # VISUALIZATION MATCH LIMIT
+        # ====================================================
+
+        visualization_limit = (
+            self._get_visualization_limit()
+        )
+
+        print(
+            "SIFTCOMPARISONTEST - FINAL VISUALIZATION LIMIT:",
+            visualization_limit,
+            flush=True
+        )
+
+        # ====================================================
+        # DISABLED = ALL MATCHES
+        # ENABLED = SELECTED NUMBER
+        # ====================================================
+
+        if visualization_limit == -1:
+
+            visualization_matches = list(
+                good_match_objects
+            )
+
+        else:
+
+            sorted_matches = sorted(
+                good_match_objects,
+                key=lambda match: match.distance
+            )
+
+            visualization_matches = (
+                sorted_matches[
+                    :visualization_limit
+                ]
+            )
+
+        # ====================================================
+        # DEBUG
+        # ====================================================
+
+        print(
+            "SIFTCOMPARISONTEST - TOTAL GOOD MATCHES:",
+            len(
+                good_match_objects
+            ),
+            flush=True
+        )
+
+        print(
+            "SIFTCOMPARISONTEST - MATCHES TO DRAW:",
+            len(
+                visualization_matches
+            ),
+            flush=True
+        )
+
+        # ====================================================
+        # DRAW MATCHES
+        # ====================================================
+
+        visualization = cv2.drawMatches(
             frame1,
             cv_keypoints1,
             frame2,
             cv_keypoints2,
-            good_matches_for_draw,
+            visualization_matches,
             None,
-            **draw_params
+            flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS
         )
 
-    # ====================================================
-    # SAVE IMAGE
-    # ====================================================
+        return visualization
 
-    def _save_image(
-        self,
-        frame,
-        image
-    ):
+    # ========================================================
+    # GET VISUALIZATION LIMIT
+    # ========================================================
 
-        frame.value = image
+    def _get_visualization_limit(self):
 
-        return Image.set_frame(
-            img=frame,
-            package_uID=self.uID,
-            redis_db=self.redis_db
+        config = self.visualization_matches
+
+        if config is None:
+            return -1
+
+        if isinstance(
+            config,
+            (int, float)
+        ):
+
+            config_value = int(
+                config
+            )
+
+            if config_value < 0:
+                return -1
+
+            return max(
+                config_value,
+                1
+            )
+
+        if isinstance(
+            config,
+            str
+        ):
+
+            config_lower = (
+                config.strip().lower()
+            )
+
+            if (
+                config_lower == "disabled"
+                or
+                config_lower == "visualizationmatchesdisabled"
+            ):
+
+                return -1
+
+            if (
+                config_lower == "enabled"
+                or
+                config_lower == "visualizationmatchesenabled"
+            ):
+
+                try:
+
+                    limit = int(
+                        self.visualization_matches_value
+                    )
+
+                    limit = max(
+                        limit,
+                        1
+                    )
+
+                    return limit
+
+                except Exception:
+
+                    return 20
+
+            try:
+
+                config_value = int(
+                    config
+                )
+
+                if config_value < 0:
+                    return -1
+
+                return max(
+                    config_value,
+                    1
+                )
+
+            except Exception:
+                pass
+
+        if isinstance(
+            config,
+            dict
+        ):
+
+            name = config.get(
+                "name",
+                ""
+            )
+
+            value = config.get(
+                "value",
+                None
+            )
+
+            name_lower = str(
+                name
+            ).strip().lower()
+
+            if (
+                name_lower == "disabled"
+                or
+                name_lower == "visualizationmatchesdisabled"
+            ):
+
+                return -1
+
+            if (
+                name_lower == "enabled"
+                or
+                name_lower == "visualizationmatchesenabled"
+            ):
+
+                try:
+
+                    return max(
+                        int(
+                            self._unwrap_value(
+                                value
+                            )
+                        ),
+                        1
+                    )
+
+                except Exception:
+
+                    return 20
+
+            try:
+
+                if value is not None:
+
+                    unwrapped = (
+                        self._unwrap_value(
+                            value
+                        )
+                    )
+
+                    if isinstance(
+                        unwrapped,
+                        (int, float)
+                    ):
+
+                        if int(unwrapped) < 0:
+                            return -1
+
+                        return max(
+                            int(unwrapped),
+                            1
+                        )
+
+            except Exception:
+                pass
+
+        value = getattr(
+            config,
+            "value",
+            None
         )
 
-    # ====================================================
+        name = getattr(
+            config,
+            "name",
+            None
+        )
+
+        if name is not None:
+
+            name_lower = str(
+                name
+            ).strip().lower()
+
+            if (
+                name_lower == "disabled"
+                or
+                name_lower == "visualizationmatchesdisabled"
+            ):
+
+                return -1
+
+            if (
+                name_lower == "enabled"
+                or
+                name_lower == "visualizationmatchesenabled"
+            ):
+
+                try:
+
+                    limit = int(
+                        self._unwrap_value(
+                            self.visualization_matches_value
+                        )
+                    )
+
+                    limit = max(
+                        limit,
+                        1
+                    )
+
+                    return limit
+
+                except Exception:
+
+                    return 20
+
+        if isinstance(
+            value,
+            str
+        ):
+
+            value_lower = (
+                value.strip().lower()
+            )
+
+            if (
+                value_lower == "disabled"
+                or
+                value_lower == "visualizationmatchesdisabled"
+            ):
+
+                return -1
+
+            if (
+                value_lower == "enabled"
+                or
+                value_lower == "visualizationmatchesenabled"
+            ):
+
+                try:
+
+                    return max(
+                        int(
+                            self.visualization_matches_value
+                        ),
+                        1
+                    )
+
+                except Exception:
+
+                    return 20
+
+        if isinstance(
+            value,
+            (int, float)
+        ):
+
+            if int(value) < 0:
+                return -1
+
+            return max(
+                int(value),
+                1
+            )
+
+        if value is not None:
+
+            nested_name = getattr(
+                value,
+                "name",
+                None
+            )
+
+            nested_value = getattr(
+                value,
+                "value",
+                None
+            )
+
+            if nested_name is not None:
+
+                nested_name_lower = str(
+                    nested_name
+                ).strip().lower()
+
+                if (
+                    nested_name_lower == "disabled"
+                    or
+                    nested_name_lower == "visualizationmatchesdisabled"
+                ):
+
+                    return -1
+
+                if (
+                    nested_name_lower == "enabled"
+                    or
+                    nested_name_lower == "visualizationmatchesenabled"
+                ):
+
+                    try:
+
+                        return max(
+                            int(
+                                self._unwrap_value(
+                                    self.visualization_matches_value
+                                )
+                            ),
+                            1
+                        )
+
+                    except Exception:
+
+                        return 20
+
+            if nested_value is not None:
+
+                try:
+
+                    nested_numeric = int(
+                        nested_value
+                    )
+
+                    if nested_numeric < 0:
+                        return -1
+
+                    return max(
+                        nested_numeric,
+                        1
+                    )
+
+                except Exception:
+                    pass
+
+        return -1
+
+    # ========================================================
+    # UNWRAP VALUE
+    # ========================================================
+
+    def _unwrap_value(self, value):
+
+        if value is None:
+            return None
+
+        if isinstance(
+            value,
+            (int, float, str)
+        ):
+            return value
+
+        if isinstance(
+            value,
+            dict
+        ):
+
+            if "value" in value:
+
+                return self._unwrap_value(
+                    value["value"]
+                )
+
+            if "name" in value:
+
+                return value["name"]
+
+        nested_value = getattr(
+            value,
+            "value",
+            None
+        )
+
+        if nested_value is not None:
+
+            if nested_value is value:
+                return value
+
+            return self._unwrap_value(
+                nested_value
+            )
+
+        nested_name = getattr(
+            value,
+            "name",
+            None
+        )
+
+        if nested_name is not None:
+
+            return nested_name
+
+        return value
+
+    # ========================================================
     # RUN
-    # ====================================================
+    # ========================================================
 
     def run(self):
 
-        # ------------------------------------------------
-        # 1. Parse SIFT outputs
-        # ------------------------------------------------
+        try:
 
-        (
-            keypoints1_dicts,
-            descriptors1
-        ) = self._extract_keypoints_and_descriptors(
-            self.sift_output_1
-        )
-
-        (
-            keypoints2_dicts,
-            descriptors2
-        ) = self._extract_keypoints_and_descriptors(
-            self.sift_output_2
-        )
-
-        # ------------------------------------------------
-        # 2. Not enough descriptors
-        # ------------------------------------------------
-
-        if (
-            len(descriptors1) < 2
-            or len(descriptors2) < 2
-        ):
-
-            self.output_detections = []
-
-            return build_response_sift_comparison_test(
-                self
+            print(
+                "SIFTCOMPARISONTEST - RUN START",
+                flush=True
             )
 
-        # ------------------------------------------------
-        # 3. Matcher
-        # ------------------------------------------------
+            # =================================================
+            # SIFT OUTPUT 1
+            # =================================================
 
-        if self.matcher == "BFMatcher":
-
-            matcher = cv2.BFMatcher(
-                cv2.NORM_L2,
-                crossCheck=False
+            (
+                keypoints1_dicts,
+                descriptors1
+            ) = self._extract_keypoints_and_descriptors(
+                self.sift_output_1
             )
 
-        elif self.matcher == "FlannBasedMatcher":
+            # =================================================
+            # SIFT OUTPUT 2
+            # =================================================
 
-            matcher = cv2.FlannBasedMatcher(
-                {
-                    "algorithm": 1,
-                    "trees": 5
-                },
-                {
-                    "checks": 50
-                }
+            (
+                keypoints2_dicts,
+                descriptors2
+            ) = self._extract_keypoints_and_descriptors(
+                self.sift_output_2
             )
 
-        else:
+            # =================================================
+            # DEBUG
+            # =================================================
 
-            raise ValueError(
-                f"Unsupported matcher: {self.matcher}"
+            print(
+                "SIFTCOMPARISONTEST - KEYPOINTS:",
+                len(
+                    keypoints1_dicts
+                ),
+                len(
+                    keypoints2_dicts
+                ),
+                flush=True
             )
 
-        # ------------------------------------------------
-        # 4. KNN matching
-        # ------------------------------------------------
-
-        matches = matcher.knnMatch(
-            descriptors1,
-            descriptors2,
-            k=2
-        )
-
-        # ------------------------------------------------
-        # 5. Lowe Ratio Test
-        # ------------------------------------------------
-
-        good_matches = []
-
-        for pair in matches:
-
-            if len(pair) < 2:
-                continue
-
-            m, n = pair
+            # =================================================
+            # YETERLİ DESCRIPTOR YOKSA
+            # =================================================
 
             if (
-                m.distance
-                < self.ratio_threshold * n.distance
+                len(descriptors1) < 2
+                or
+                len(descriptors2) < 2
             ):
-                good_matches.append(m)
 
-        # ------------------------------------------------
-        # 6. Result
-        # ------------------------------------------------
+                self.output_detections = [
 
-        good_match_count = len(
-            good_matches
-        )
+                    Detection(
+                        boundingBox=None,
+                        keyPoints=[],
+                        connections=[],
+                        confidence=0.0,
+                        classId=0,
+                        classLabel="NoMatch",
+                        imgUID=self.uID
+                    )
 
-        is_match = (
-            good_match_count
-            >= self.good_matches_threshold
-        )
+                ]
 
-        self.output_detections = [
-            {
-                "boundingBox": None,
-                "confidence": float(
-                    good_match_count
-                ),
-                "classLabel": (
-                    "Match"
-                    if is_match
-                    else "NoMatch"
-                ),
-                "classId": (
-                    1
-                    if is_match
-                    else 0
-                ),
-                "keyPoints": [],
-                "connections": []
-            }
-        ]
+                return build_response_sift_comparison_test(
+                    context=self
+                )
 
-        # ------------------------------------------------
-        # 7. VISUALIZATION
-        # ------------------------------------------------
-        #
-        # Roboflow v2:
-        #
-        # visualize=False
-        #   -> no visualization
-        #
-        # visualize=True + image inputs
-        #   -> visualization_1
-        #   -> visualization_2
-        #   -> visualization_matches
-        #
-        # No visualization match-count parameter.
-        # ------------------------------------------------
+            # =================================================
+            # MATCHER
+            # =================================================
 
-        if (
-            self._visualization_enabled()
-            and self.visualization_input_1 is not None
-            and self.visualization_input_2 is not None
-        ):
+            if self.matcher == "BFMatcher":
 
-            frame1 = Image.get_frame(
+                matcher = cv2.BFMatcher(
+                    cv2.NORM_L2
+                )
+
+            else:
+
+                matcher = cv2.FlannBasedMatcher(
+                    dict(
+                        algorithm=1,
+                        trees=5
+                    ),
+                    dict(
+                        checks=50
+                    )
+                )
+
+            # =================================================
+            # KNN MATCH
+            # =================================================
+
+            matches = matcher.knnMatch(
+                descriptors1,
+                descriptors2,
+                k=2
+            )
+
+            # =================================================
+            # LOWE RATIO TEST
+            # =================================================
+
+            good_match_objects = []
+
+            for pair in matches:
+
+                if len(pair) < 2:
+                    continue
+
+                m, n = pair
+
+                if (
+                    m.distance
+                    <
+                    float(
+                        self.ratio_threshold
+                    )
+                    *
+                    n.distance
+                ):
+
+                    good_match_objects.append(
+                        m
+                    )
+
+            # =================================================
+            # MATCH COUNT
+            # =================================================
+
+            good_matches_count = len(
+                good_match_objects
+            )
+
+            print(
+                "SIFTCOMPARISONTEST - GOOD MATCHES:",
+                good_matches_count,
+                flush=True
+            )
+
+            # =================================================
+            # MATCH DECISION
+            # =================================================
+
+            images_match = (
+                good_matches_count
+                >=
+                int(
+                    self.good_matches_threshold
+                )
+            )
+
+            # =================================================
+            # NOVAVISION KEYPOINTS
+            # =================================================
+
+            all_keypoints_dicts = (
+                keypoints1_dicts
+                +
+                keypoints2_dicts
+            )
+
+            offset = len(
+                keypoints1_dicts
+            )
+
+            keypoints = [
+
+                KeyPoints(
+                    cx=float(
+                        kp["pt"][0]
+                    ),
+                    cy=float(
+                        kp["pt"][1]
+                    ),
+                    confidence=1.0
+                )
+
+                for kp
+                in all_keypoints_dicts
+
+            ]
+
+            # =================================================
+            # CONNECTIONS
+            # =================================================
+
+            connections = [
+
+                Connection(
+                    p1=int(
+                        match.queryIdx
+                    ),
+                    p2=int(
+                        match.trainIdx
+                    ) + offset
+                )
+
+                for match
+                in good_match_objects
+
+            ]
+
+            # =================================================
+            # OUTPUT DETECTIONS
+            # =================================================
+
+            self.output_detections = [
+
+                Detection(
+                    boundingBox=None,
+                    keyPoints=keypoints,
+                    connections=connections,
+                    confidence=float(
+                        good_matches_count
+                    ),
+                    classId=(
+                        1
+                        if images_match
+                        else 0
+                    ),
+                    classLabel=(
+                        "Match"
+                        if images_match
+                        else "NoMatch"
+                    ),
+                    imgUID=self.uID
+                )
+
+            ]
+
+            # =================================================
+            # IMAGE 1
+            # =================================================
+
+            image1_frame = Image.get_frame(
                 img=self.visualization_input_1,
                 redis_db=self.redis_db
             )
 
-            frame2 = Image.get_frame(
+            # =================================================
+            # IMAGE 2
+            # =================================================
+
+            image2_frame = Image.get_frame(
                 img=self.visualization_input_2,
                 redis_db=self.redis_db
             )
 
-            if frame1 is None or frame2 is None:
+            # =================================================
+            # FRAME CHECK
+            # =================================================
+
+            if image1_frame is None:
 
                 raise ValueError(
-                    "Visualization images could not be loaded."
+                    "Image.get_frame returned None for image 1"
                 )
 
-            # Separate frames so outputs do not overwrite
-            # each other.
+            if image2_frame is None:
 
-            frame1_kp = Image.get_frame(
-                img=self.visualization_input_1,
+                raise ValueError(
+                    "Image.get_frame returned None for image 2"
+                )
+
+            if image1_frame.value is None:
+
+                raise ValueError(
+                    "Image 1 value is None"
+                )
+
+            if image2_frame.value is None:
+
+                raise ValueError(
+                    "Image 2 value is None"
+                )
+
+            frame1 = np.asarray(
+                image1_frame.value
+            )
+
+            frame2 = np.asarray(
+                image2_frame.value
+            )
+
+            # =================================================
+            # CREATE VISUALIZATION
+            # =================================================
+
+            visualization = self._create_visualization(
+                frame1,
+                frame2,
+                keypoints1_dicts,
+                keypoints2_dicts,
+                good_match_objects
+            )
+
+            # =================================================
+            # SAVE VISUALIZATION
+            # =================================================
+
+            image1_frame.value = visualization
+
+            self.output_visualization = Image.set_frame(
+                img=image1_frame,
+                package_uID=self.uID,
                 redis_db=self.redis_db
             )
 
-            frame2_kp = Image.get_frame(
-                img=self.visualization_input_2,
-                redis_db=self.redis_db
+        except Exception as e:
+
+            print(
+                "SIFTCOMPARISONTEST - ERROR:",
+                repr(e),
+                flush=True
             )
 
-            frame_matches = Image.get_frame(
-                img=self.visualization_input_1,
-                redis_db=self.redis_db
-            )
+            if not self.output_detections:
 
-            # 7.1 First image keypoints
+                self.output_detections = [
 
-            visualization1 = (
-                self._create_keypoint_visualization(
-                    frame1.value,
-                    keypoints1_dicts
-                )
-            )
+                    Detection(
+                        boundingBox=None,
+                        keyPoints=[],
+                        connections=[],
+                        confidence=0.0,
+                        classId=0,
+                        classLabel="NoMatch",
+                        imgUID=self.uID
+                    )
 
-            # 7.2 Second image keypoints
+                ]
 
-            visualization2 = (
-                self._create_keypoint_visualization(
-                    frame2.value,
-                    keypoints2_dicts
-                )
-            )
+            self.output_visualization = None
 
-            # 7.3 Match visualization
-
-            visualization_matches = (
-                self._create_matches_visualization(
-                    frame1.value,
-                    frame2.value,
-                    keypoints1_dicts,
-                    keypoints2_dicts,
-                    good_matches
-                )
-            )
-
-            # Save outputs independently.
-
-            self.output_visualization_1 = (
-                self._save_image(
-                    frame1_kp,
-                    visualization1
-                )
-            )
-
-            self.output_visualization_2 = (
-                self._save_image(
-                    frame2_kp,
-                    visualization2
-                )
-            )
-
-            self.output_visualization_matches = (
-                self._save_image(
-                    frame_matches,
-                    visualization_matches
-                )
-            )
+        # =====================================================
+        # RESPONSE
+        # =====================================================
 
         return build_response_sift_comparison_test(
-            self
+            context=self
         )
 
 
+# ============================================================
+# MAIN
+# ============================================================
+
 if __name__ == "__main__":
+
     Executor(
         sys.argv[1]
     ).run()
