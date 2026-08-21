@@ -1,4 +1,5 @@
-```
+from typing import Optional, Union, Literal, Any
+
 import os
 import sys
 import json
@@ -20,6 +21,7 @@ from sdks.novavision.src.base.model import (
     Detection,
     Connection
 )
+
 from sdks.novavision.src.helper.executor import Executor
 
 from components.SiftComparisonTest.src.utils.response import (
@@ -508,16 +510,6 @@ class SiftComparisonTest(Component):
             flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS
         )
 
-        # ====================================================
-        # DEBUG
-        # ====================================================
-
-        print(
-            "SIFTCOMPARISONTEST - VISUALIZATION CREATED:",
-            visualization.shape,
-            flush=True
-        )
-
         return visualization
 
     # ========================================================
@@ -528,27 +520,8 @@ class SiftComparisonTest(Component):
 
         config = self.visualization_matches
 
-        # ====================================================
-        # DEBUG RAW CONFIG
-        # ====================================================
-
-        print(
-            "SIFTCOMPARISONTEST - GET LIMIT CONFIG:",
-            repr(config),
-            flush=True
-        )
-
-        # ====================================================
-        # NONE
-        # ====================================================
-
         if config is None:
-
             return -1
-
-        # ====================================================
-        # DIRECT INTEGER
-        # ====================================================
 
         if isinstance(
             config,
@@ -567,10 +540,6 @@ class SiftComparisonTest(Component):
                 1
             )
 
-        # ====================================================
-        # DIRECT STRING
-        # ====================================================
-
         if isinstance(
             config,
             str
@@ -580,32 +549,13 @@ class SiftComparisonTest(Component):
                 config.strip().lower()
             )
 
-            print(
-                "SIFTCOMPARISONTEST - CONFIG STRING:",
-                config_lower,
-                flush=True
-            )
-
-            # ------------------------------------------------
-            # DISABLED
-            # ------------------------------------------------
-
             if (
                 config_lower == "disabled"
                 or
                 config_lower == "visualizationmatchesdisabled"
             ):
 
-                print(
-                    "SIFTCOMPARISONTEST - MODE: DISABLED",
-                    flush=True
-                )
-
                 return -1
-
-            # ------------------------------------------------
-            # ENABLED
-            # ------------------------------------------------
 
             if (
                 config_lower == "enabled"
@@ -624,27 +574,11 @@ class SiftComparisonTest(Component):
                         1
                     )
 
-                    print(
-                        "SIFTCOMPARISONTEST - MODE: ENABLED",
-                        "LIMIT:",
-                        limit,
-                        flush=True
-                    )
-
                     return limit
 
                 except Exception:
 
-                    print(
-                        "SIFTCOMPARISONTEST - ENABLED VALUE INVALID, USING 20",
-                        flush=True
-                    )
-
                     return 20
-
-            # ------------------------------------------------
-            # STRING NUMBER
-            # ------------------------------------------------
 
             try:
 
@@ -661,22 +595,12 @@ class SiftComparisonTest(Component):
                 )
 
             except Exception:
-
                 pass
-
-        # ====================================================
-        # DICT CONFIG
-        # ====================================================
 
         if isinstance(
             config,
             dict
         ):
-
-            print(
-                "SIFTCOMPARISONTEST - CONFIG IS DICT",
-                flush=True
-            )
 
             name = config.get(
                 "name",
@@ -721,7 +645,6 @@ class SiftComparisonTest(Component):
 
                     return 20
 
-            # If dictionary itself contains a value
             try:
 
                 if value is not None:
@@ -746,12 +669,7 @@ class SiftComparisonTest(Component):
                         )
 
             except Exception:
-
                 pass
-
-        # ====================================================
-        # OBJECT / ENUM / PYDANTIC
-        # ====================================================
 
         value = getattr(
             config,
@@ -765,32 +683,17 @@ class SiftComparisonTest(Component):
             None
         )
 
-        # ====================================================
-        # ENUM NAME
-        # ====================================================
-
         if name is not None:
 
             name_lower = str(
                 name
             ).strip().lower()
 
-            print(
-                "SIFTCOMPARISONTEST - OBJECT NAME:",
-                name_lower,
-                flush=True
-            )
-
             if (
                 name_lower == "disabled"
                 or
                 name_lower == "visualizationmatchesdisabled"
             ):
-
-                print(
-                    "SIFTCOMPARISONTEST - MODE: DISABLED",
-                    flush=True
-                )
 
                 return -1
 
@@ -813,22 +716,11 @@ class SiftComparisonTest(Component):
                         1
                     )
 
-                    print(
-                        "SIFTCOMPARISONTEST - MODE: ENABLED",
-                        "LIMIT:",
-                        limit,
-                        flush=True
-                    )
-
                     return limit
 
                 except Exception:
 
                     return 20
-
-        # ====================================================
-        # ENUM VALUE
-        # ====================================================
 
         if isinstance(
             value,
@@ -866,10 +758,6 @@ class SiftComparisonTest(Component):
 
                     return 20
 
-        # ====================================================
-        # NUMERIC VALUE
-        # ====================================================
-
         if isinstance(
             value,
             (int, float)
@@ -882,10 +770,6 @@ class SiftComparisonTest(Component):
                 int(value),
                 1
             )
-
-        # ====================================================
-        # NESTED VALUE
-        # ====================================================
 
         if value is not None:
 
@@ -953,19 +837,7 @@ class SiftComparisonTest(Component):
                     )
 
                 except Exception:
-
                     pass
-
-        # ====================================================
-        # FALLBACK
-        # ====================================================
-
-        print(
-            "SIFTCOMPARISONTEST - UNKNOWN VISUALIZATION CONFIG",
-            repr(config),
-            "-> USING DISABLED",
-            flush=True
-        )
 
         return -1
 
@@ -1114,11 +986,6 @@ class SiftComparisonTest(Component):
                     cv2.NORM_L2
                 )
 
-                print(
-                    "SIFTCOMPARISONTEST - BF MATCHER",
-                    flush=True
-                )
-
             else:
 
                 matcher = cv2.FlannBasedMatcher(
@@ -1129,11 +996,6 @@ class SiftComparisonTest(Component):
                     dict(
                         checks=50
                     )
-                )
-
-                print(
-                    "SIFTCOMPARISONTEST - FLANN MATCHER",
-                    flush=True
                 )
 
             # =================================================
@@ -1333,22 +1195,6 @@ class SiftComparisonTest(Component):
             )
 
             # =================================================
-            # DEBUG
-            # =================================================
-
-            print(
-                "SIFTCOMPARISONTEST - FRAME1 SHAPE:",
-                frame1.shape,
-                flush=True
-            )
-
-            print(
-                "SIFTCOMPARISONTEST - FRAME2 SHAPE:",
-                frame2.shape,
-                flush=True
-            )
-
-            # =================================================
             # CREATE VISUALIZATION
             # =================================================
 
@@ -1370,11 +1216,6 @@ class SiftComparisonTest(Component):
                 img=image1_frame,
                 package_uID=self.uID,
                 redis_db=self.redis_db
-            )
-
-            print(
-                "SIFTCOMPARISONTEST - VISUALIZATION SAVED",
-                flush=True
             )
 
         except Exception as e:
@@ -1421,4 +1262,3 @@ if __name__ == "__main__":
     Executor(
         sys.argv[1]
     ).run()
-```
