@@ -248,4 +248,4 @@ class PackageConfigs(Configs):
 class PackageModel(Package):
     name: Literal["SiftComparisonTest"] = "SiftComparisonTest"
     configs: PackageConfigs
-    type: Literal["component"] = "component"
+    type: Literal["component"] = "component
