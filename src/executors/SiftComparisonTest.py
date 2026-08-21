@@ -1,3 +1,4 @@
+```
 import os
 import sys
 import json
@@ -1151,12 +1152,6 @@ class SiftComparisonTest(Component):
 
             good_match_objects = []
 
-            # =================================================
-            # LOWE RATIO TEST + DEBUG
-            # =================================================
-
-            ratio_values = []
-
             for pair in matches:
 
                 if len(pair) < 2:
@@ -1164,52 +1159,19 @@ class SiftComparisonTest(Component):
 
                 m, n = pair
 
-                # Avoid division by zero while calculating the ratio.
-                if n.distance == 0:
-                    continue
+                if (
+                    m.distance
+                    <
+                    float(
+                        self.ratio_threshold
+                    )
+                    *
+                    n.distance
+                ):
 
-                ratio = m.distance / n.distance
-                ratio_values.append(ratio)
-
-                if ratio < float(self.ratio_threshold):
-                    good_match_objects.append(m)
-
-            print(
-                "SIFTCOMPARISONTEST - RATIO THRESHOLD:",
-                self.ratio_threshold,
-                flush=True
-            )
-
-            print(
-                "SIFTCOMPARISONTEST - RATIO COUNT:",
-                len(ratio_values),
-                flush=True
-            )
-
-            if ratio_values:
-                print(
-                    "SIFTCOMPARISONTEST - RATIO MIN:",
-                    min(ratio_values),
-                    flush=True
-                )
-
-                print(
-                    "SIFTCOMPARISONTEST - RATIO MAX:",
-                    max(ratio_values),
-                    flush=True
-                )
-
-                print(
-                    "SIFTCOMPARISONTEST - RATIO AVG:",
-                    sum(ratio_values) / len(ratio_values),
-                    flush=True
-                )
-
-            print(
-                "SIFTCOMPARISONTEST - GOOD MATCHES:",
-                len(good_match_objects),
-                flush=True
-            )
+                    good_match_objects.append(
+                        m
+                    )
 
             # =================================================
             # MATCH COUNT
