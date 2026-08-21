@@ -60,21 +60,6 @@ class SiftComparisonTest(Component):
             "Matcher"
         )
 
-        # Visualization configuration
-        self.visualization_matches = self.request.get_param(
-            "ConfigVisualizationMatches"
-        )
-
-        self.visualization_matches_value = self.request.get_param(
-            "VisualizationMatchesValue"
-        )
-
-        if self.visualization_matches is None:
-            self.visualization_matches = "Disabled"
-
-        if self.visualization_matches_value is None:
-            self.visualization_matches_value = 20
-
         # Visualization input images
         self.visualization_input_1 = self.request.get_param(
             "InputVisualization1"
@@ -185,144 +170,6 @@ class SiftComparisonTest(Component):
             )
         ]
 
-    def _unwrap_value(self, value):
-        if value is None:
-            return None
-
-        if isinstance(value, (int, float, str)):
-            return value
-
-        if isinstance(value, dict):
-            if "value" in value:
-                return self._unwrap_value(value["value"])
-            if "name" in value:
-                return value["name"]
-
-        nested_value = getattr(value, "value", None)
-        if nested_value is not None and nested_value is not value:
-            return self._unwrap_value(nested_value)
-
-        nested_name = getattr(value, "name", None)
-        if nested_name is not None:
-            return nested_name
-
-        return value
-
-    def _get_visualization_limit(self):
-        config = self.visualization_matches
-
-        if config is None:
-            return -1
-
-        # Direct numeric form
-        if isinstance(config, (int, float)):
-            value = int(config)
-            return -1 if value < 0 else max(value, 1)
-
-        # String / enum form
-        if isinstance(config, str):
-            config_lower = config.strip().lower()
-
-            if config_lower in (
-                "disabled",
-                "visualizationmatchesdisabled",
-            ):
-                return -1
-
-            if config_lower in (
-                "enabled",
-                "visualizationmatchesenabled",
-            ):
-                try:
-                    return max(int(self.visualization_matches_value), 1)
-                except Exception:
-                    return 20
-
-            try:
-                value = int(config)
-                return -1 if value < 0 else max(value, 1)
-            except Exception:
-                return -1
-
-        # Dictionary form
-        if isinstance(config, dict):
-            name = str(config.get("name", "")).strip().lower()
-            value = config.get("value", None)
-
-            if name in (
-                "disabled",
-                "visualizationmatchesdisabled",
-            ):
-                return -1
-
-            if name in (
-                "enabled",
-                "visualizationmatchesenabled",
-            ):
-                try:
-                    return max(
-                        int(self._unwrap_value(value)),
-                        1
-                    )
-                except Exception:
-                    return 20
-
-        # Pydantic/object form
-        name = getattr(config, "name", None)
-        value = getattr(config, "value", None)
-
-        if name is not None:
-            name_lower = str(name).strip().lower()
-
-            if name_lower in (
-                "disabled",
-                "visualizationmatchesdisabled",
-            ):
-                return -1
-
-            if name_lower in (
-                "enabled",
-                "visualizationmatchesenabled",
-            ):
-                try:
-                    return max(
-                        int(self._unwrap_value(
-                            self.visualization_matches_value
-                        )),
-                        1
-                    )
-                except Exception:
-                    return 20
-
-        value = self._unwrap_value(value)
-
-        if isinstance(value, str):
-            value_lower = value.strip().lower()
-
-            if value_lower in (
-                "disabled",
-                "visualizationmatchesdisabled",
-            ):
-                return -1
-
-            if value_lower in (
-                "enabled",
-                "visualizationmatchesenabled",
-            ):
-                try:
-                    return max(
-                        int(self.visualization_matches_value),
-                        1
-                    )
-                except Exception:
-                    return 20
-
-        if isinstance(value, (int, float)):
-            value = int(value)
-            return -1 if value < 0 else max(value, 1)
-
-        return -1
-
     def _create_visualization(
         self,
         frame1,
@@ -376,19 +223,12 @@ class SiftComparisonTest(Component):
             for kp in keypoints2_dicts
         ]
 
-        limit = self._get_visualization_limit()
-
-        if limit == -1:
-            matches_to_draw = list(good_matches)
-        else:
-            matches_to_draw = sorted(
-                good_matches,
-                key=lambda match: match.distance
-            )[:limit]
+        # Roboflow-style visualization:
+        # draw all good matches that passed Lowe's Ratio Test.
+        matches_to_draw = list(good_matches)
 
         print(
-            "SIFTCOMPARISONTEST - VISUALIZATION LIMIT:",
-            limit,
+            "SIFTCOMPARISONTEST - VISUALIZATION: AUTOMATIC",
             flush=True
         )
 
@@ -691,3 +531,4 @@ if __name__ == "__main__":
     Executor(
         sys.argv[1]
     ).run()
+```

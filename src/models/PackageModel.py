@@ -1,7 +1,5 @@
 from typing import Optional, Union, Literal, Any
-
 from pydantic import Field
-
 from sdks.novavision.src.base.model import (
     Package,
     Image,
@@ -168,98 +166,6 @@ class Matcher(Config):
 
 
 # ============================================================
-# VISUALIZATION MATCHES VALUE
-# ============================================================
-
-class VisualizationMatchesValue(Config):
-    name: Literal[
-        "VisualizationMatchesValue"
-    ] = "VisualizationMatchesValue"
-
-    value: int = Field(
-        default=50,
-        ge=1,
-        le=100000
-    )
-
-    type: Literal["number"] = "number"
-    field: Literal["textInput"] = "textInput"
-
-    class Config:
-        title = "Visualization Matches Value"
-
-        json_schema_extra = {
-            "shortDescription": "Maximum number of matches to draw."
-        }
-
-
-# ============================================================
-# VISUALIZATION MATCHES ENABLED
-# ============================================================
-
-class VisualizationMatchesEnabled(Config):
-    name: Literal[
-        "VisualizationMatchesEnabled"
-    ] = "VisualizationMatchesEnabled"
-
-    value: Literal[
-        "VisualizationMatchesEnabled"
-    ] = "VisualizationMatchesEnabled"
-
-    type: Literal["string"] = "string"
-    field: Literal["option"] = "option"
-
-    VisualizationMatchesValue: VisualizationMatchesValue
-
-    class Config:
-        title = "Enabled"
-
-
-# ============================================================
-# VISUALIZATION MATCHES DISABLED
-# ============================================================
-
-class VisualizationMatchesDisabled(Config):
-    name: Literal[
-        "VisualizationMatchesDisabled"
-    ] = "VisualizationMatchesDisabled"
-
-    # -1 = unlimited / draw all matches
-    value: int = -1
-
-    type: Literal["number"] = "number"
-    field: Literal["option"] = "option"
-
-    class Config:
-        title = "Disabled"
-
-
-# ============================================================
-# VISUALIZATION MATCHES CONFIG
-# ============================================================
-
-class ConfigVisualizationMatches(Config):
-    name: Literal[
-        "ConfigVisualizationMatches"
-    ] = "ConfigVisualizationMatches"
-
-    value: Union[
-        VisualizationMatchesEnabled,
-        VisualizationMatchesDisabled
-    ]
-
-    type: Literal["object"] = "object"
-    field: Literal["dependentDropdownlist"] = "dependentDropdownlist"
-
-    class Config:
-        title = "Visualization Matches"
-
-        json_schema_extra = {
-            "shortDescription": "Limit the number of matches drawn."
-        }
-
-
-# ============================================================
 # CONFIGS
 # ============================================================
 
@@ -267,7 +173,6 @@ class SiftComparisonTestConfigs(Configs):
     GoodMatchesThreshold: GoodMatchesThreshold
     RatioThreshold: RatioThreshold
     Matcher: Matcher
-    ConfigVisualizationMatches: ConfigVisualizationMatches
 
 
 # ============================================================
