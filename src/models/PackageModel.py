@@ -1,6 +1,5 @@
 from typing import Optional, Union, Literal, Any
 from pydantic import Field
-
 from sdks.novavision.src.base.model import (
     Package,
     Image,
@@ -68,31 +67,13 @@ class OutputDetections(Output):
         title = "Output Detections"
 
 
-class OutputVisualization1(Output):
-    name: Literal["OutputVisualization1"] = "OutputVisualization1"
+class OutputVisualization(Output):
+    name: Literal["OutputVisualization"] = "OutputVisualization"
     value: Optional[Image] = None
     type: Literal["object"] = "object"
 
     class Config:
-        title = "Visualization 1"
-
-
-class OutputVisualization2(Output):
-    name: Literal["OutputVisualization2"] = "OutputVisualization2"
-    value: Optional[Image] = None
-    type: Literal["object"] = "object"
-
-    class Config:
-        title = "Visualization 2"
-
-
-class OutputVisualizationMatches(Output):
-    name: Literal["OutputVisualizationMatches"] = "OutputVisualizationMatches"
-    value: Optional[Image] = None
-    type: Literal["object"] = "object"
-
-    class Config:
-        title = "Visualization Matches"
+        title = "Output Visualization"
 
 
 # ============================================================
@@ -185,26 +166,6 @@ class Matcher(Config):
 
 
 # ============================================================
-# VISUALIZE - ROBOFLOW V2
-# ============================================================
-
-class Visualize(Config):
-    name: Literal["Visualize"] = "Visualize"
-
-    value: bool = False
-
-    type: Literal["boolean"] = "boolean"
-    field: Literal["checkbox"] = "checkbox"
-
-    class Config:
-        title = "Visualize"
-
-        json_schema_extra = {
-            "shortDescription": "Generate visualization outputs."
-        }
-
-
-# ============================================================
 # CONFIGS
 # ============================================================
 
@@ -212,7 +173,6 @@ class SiftComparisonTestConfigs(Configs):
     GoodMatchesThreshold: GoodMatchesThreshold
     RatioThreshold: RatioThreshold
     Matcher: Matcher
-    Visualize: Visualize
 
 
 # ============================================================
@@ -232,9 +192,7 @@ class SiftComparisonTestInputs(Inputs):
 
 class SiftComparisonTestOutputs(Outputs):
     OutputDetections: OutputDetections
-    OutputVisualization1: OutputVisualization1
-    OutputVisualization2: OutputVisualization2
-    OutputVisualizationMatches: OutputVisualizationMatches
+    OutputVisualization: OutputVisualization
 
 
 # ============================================================
