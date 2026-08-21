@@ -7,73 +7,54 @@ from components.SiftComparisonTest.src.models.PackageModel import (
     SiftComparisonTest,
     SiftComparisonTestResponse,
     SiftComparisonTestOutputs,
-    OutputDetections,
-    OutputVisualization,
+    ImagesMatch,
+    GoodMatchesCount,
+    KeyPoints1,
+    Descriptors1,
+    KeyPoints2,
+    Descriptors2,
+    Visualization1,
+    Visualization2,
+    VisualizationMatches,
 )
 
 
 def build_response_sift_comparison_test(context):
 
-    # ========================================================
-    # OUTPUT DETECTIONS
-    # ========================================================
-
-    output_detections = OutputDetections(
-        value=context.output_detections
-    )
-
-    # ========================================================
-    # OUTPUT VISUALIZATION
-    # ========================================================
-
-    output_visualization = OutputVisualization(
-        value=getattr(
-            context,
-            "output_visualization",
-            None
-        )
-    )
-
-    # ========================================================
-    # OUTPUTS
-    # ========================================================
-
     outputs = SiftComparisonTestOutputs(
-        OutputDetections=output_detections,
-        OutputVisualization=output_visualization
+        ImagesMatch=ImagesMatch(
+            value=getattr(context, "images_match", False)
+        ),
+        GoodMatchesCount=GoodMatchesCount(
+            value=getattr(context, "good_matches_count", 0)
+        ),
+        KeyPoints1=KeyPoints1(
+            value=getattr(context, "keypoints_1", None)
+        ),
+        Descriptors1=Descriptors1(
+            value=getattr(context, "descriptors_1", None)
+        ),
+        KeyPoints2=KeyPoints2(
+            value=getattr(context, "keypoints_2", None)
+        ),
+        Descriptors2=Descriptors2(
+            value=getattr(context, "descriptors_2", None)
+        ),
+        Visualization1=Visualization1(
+            value=getattr(context, "visualization_1", None)
+        ),
+        Visualization2=Visualization2(
+            value=getattr(context, "visualization_2", None)
+        ),
+        VisualizationMatches=VisualizationMatches(
+            value=getattr(context, "visualization_matches", None)
+        ),
     )
 
-    # ========================================================
-    # RESPONSE
-    # ========================================================
-
-    response = SiftComparisonTestResponse(
-        outputs=outputs
-    )
-
-    # ========================================================
-    # EXECUTOR
-    # ========================================================
-
-    executor = SiftComparisonTest(
-        value=response
-    )
-
-    # ========================================================
-    # PACKAGE CONFIG
-    # ========================================================
-
-    config_executor = ConfigExecutor(
-        value=executor
-    )
-
-    package_configs = PackageConfigs(
-        executor=config_executor
-    )
-
-    # ========================================================
-    # PACKAGE
-    # ========================================================
+    response = SiftComparisonTestResponse(outputs=outputs)
+    executor = SiftComparisonTest(value=response)
+    config_executor = ConfigExecutor(value=executor)
+    package_configs = PackageConfigs(executor=config_executor)
 
     package = PackageHelper(
         packageModel=PackageModel,
