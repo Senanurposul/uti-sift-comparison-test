@@ -13,6 +13,7 @@ from components.SiftComparisonTest.src.models.PackageModel import (
     OutputVisualizationMatches,
 )
 
+
 def build_response_sift_comparison_test(context):
 
     outputs = SiftComparisonTestOutputs(
@@ -34,10 +35,21 @@ def build_response_sift_comparison_test(context):
         )
     )
 
-    response = SiftComparisonTestResponse(outputs=outputs)
-    executor = SiftComparisonTest(value=response)
-    config_executor = ConfigExecutor(value=executor)
-    package_configs = PackageConfigs(executor=config_executor)
+    response = SiftComparisonTestResponse(
+        outputs=outputs
+    )
+
+    executor = SiftComparisonTest(
+        value=response
+    )
+
+    config_executor = ConfigExecutor(
+        value=executor
+    )
+
+    package_configs = PackageConfigs(
+        executor=config_executor
+    )
 
     package = PackageHelper(
         packageModel=PackageModel,

@@ -1,715 +1,251 @@
-import os
-import sys
-import json
-import cv2
-import numpy as np
-
-# Projenin root dizinine ulaşabilmek için path ekleniyor.
-sys.path.append(
-    os.path.join(
-        os.path.dirname(__file__),
-        '../../../../'
-    )
-)
-
-from sdks.novavision.src.media.image import Image
-from sdks.novavision.src.base.component import Component
+from typing import Optional, Union, Literal, Any
+from pydantic import Field
 from sdks.novavision.src.base.model import (
-    KeyPoints,
-    Detection,
-    Connection
-)
-from sdks.novavision.src.helper.executor import Executor
-
-from components.SiftComparisonTest.src.utils.response import (
-    build_response_sift_comparison_test
-)
-
-from components.SiftComparisonTest.src.models.PackageModel import (
-    PackageModel
+    Package,
+    Image,
+    Inputs,
+    Outputs,
+    Configs,
+    Response,
+    Request,
+    Output,
+    Input,
+    Config,
 )
 
+# ============================================================
+# INPUTS
+# ============================================================
 
-class SiftComparisonTest(Component):
-
-    def __init__(self, request, bootstrap):
-        super().__init__(request, bootstrap)
-
-        # Gelen request'i PackageModel ile doğruluyoruz.
-        self.request.model = PackageModel(
-            **self.request.data
-        )
-
-        # Match kabul edilmesi için gereken
-        # minimum good match sayısı.
-        self.good_matches_threshold = self.request.get_param(
-            "GoodMatchesThreshold"
-        )
-
-        # Lowe Ratio Test threshold değeri.
-        self.ratio_threshold = self.request.get_param(
-            "RatioThreshold"
-        )
-
-        # Kullanılacak matcher.
-        # Değer:
-        # "FlannBasedMatcher"
-        # veya
-        # "BFMatcher"
-        self.matcher = self.request.get_param(
-            "Matcher"
-        )
-
-        # Visualization configuration.
-        # True  -> create visualization_1, visualization_2
-        #         and visualization_matches.
-        # False -> do not create visualization outputs.
-        self.visualize = self.request.get_param(
-            "Visualize"
-        )
-
-        # Visualization input images
-        self.visualization_input_1 = self.request.get_param(
-            "InputVisualization1"
-        )
-
-        self.visualization_input_2 = self.request.get_param(
-            "InputVisualization2"
-        )
-
-        self.output_visualization = None
-
-        # Birinci SIFT output'u.
-        self.sift_output_1 = self.request.get_param(
-            "InputSIFTOutput1"
-        )
-
-        # İkinci SIFT output'u.
-        self.sift_output_2 = self.request.get_param(
-            "InputSIFTOutput2"
-        )
-
-    @staticmethod
-    def bootstrap(config: dict) -> dict:
-        return {}
-
-    def _extract_keypoints_and_descriptors(self, sift_output):
-        """
-        SIFT output'undan keypoint koordinatlarını
-        ve descriptor'ları ayırır.
-        """
-
-        keypoints_dicts = []
-        descriptors = []
-
-        # Input JSON string olarak geldiyse Python
-        # objesine dönüştürüyoruz.
-        if isinstance(sift_output, str):
-            sift_output = json.loads(sift_output)
-
-        # SIFT output'unun liste olması gerekiyor.
-        if not isinstance(sift_output, list):
-            raise ValueError(
-                "SIFT output must be a list."
-            )
-
-        # Her detection içerisindeki keypoint'leri
-        # ve descriptor'ları topluyoruz.
-        for detection in sift_output:
-
-            for kp in detection.get("keyPoints", []):
-
-                # Descriptor yoksa bu keypoint'i
-                # matching işlemine dahil etmiyoruz.
-                if "descriptor" not in kp:
-                    continue
-
-                keypoints_dicts.append(
-                    {
-                        "pt": (
-                            float(kp["cx"]),
-                            float(kp["cy"])
-                        )
-                    }
-                )
-
-                descriptors.append(
-                    kp["descriptor"]
-                )
-
-        # Hiç descriptor bulunmadıysa boş descriptor
-        # matrisi döndürüyoruz.
-        if not descriptors:
-            return (
-                keypoints_dicts,
-                np.empty(
-                    (0, 128),
-                    dtype=np.float32
-                )
-            )
-
-        # OpenCV matcher'ları için descriptor'ların
-        # float32 olması gerekiyor.
-        descriptors = np.asarray(
-            descriptors,
-            dtype=np.float32
-        )
-
-        return (
-            keypoints_dicts,
-            descriptors
-        )
-
-    def _no_match_result(self):
-        """
-        Yeterli descriptor bulunmadığında
-        kullanılacak NoMatch sonucu.
-        """
-
-        return [
-            Detection(
-                boundingBox=None,
-                keyPoints=[],
-                connections=[],
-                confidence=0.0,
-                classId=0,
-                classLabel="NoMatch",
-                imgUID=self.uID
-            )
-        ]
-
-    def _is_visualization_enabled(self):
-        value = self.visualize
-
-        if isinstance(value, bool):
-            return value
-
-        if isinstance(value, str):
-            return value.strip().lower() in (
-                "true",
-                "1",
-                "yes",
-                "enabled"
-            )
-
-        if isinstance(value, dict):
-            value = value.get("value", value.get("name"))
-
-            if isinstance(value, bool):
-                return value
-
-            if isinstance(value, str):
-                return value.strip().lower() in (
-                    "true",
-                    "1",
-                    "yes",
-                    "enabled"
-                )
-
-        nested_value = getattr(value, "value", None)
-
-        if isinstance(nested_value, bool):
-            return nested_value
-
-        if isinstance(nested_value, str):
-            return nested_value.strip().lower() in (
-                "true",
-                "1",
-                "yes",
-                "enabled"
-            )
-
-        return False
-
-    def _create_keypoint_visualization(
-        self,
-        frame,
-        keypoints_dicts
-    ):
-        frame = np.asarray(frame)
-
-        if frame.size == 0:
-            raise ValueError("Visualization frame is empty")
-
-        if frame.dtype != np.uint8:
-            frame = frame.astype(np.uint8)
-
-        cv_keypoints = [
-            cv2.KeyPoint(
-                float(kp["pt"][0]),
-                float(kp["pt"][1]),
-                1.0
-            )
-            for kp in keypoints_dicts
-        ]
-
-        return cv2.drawKeypoints(
-            frame,
-            cv_keypoints,
-            None,
-            flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS
-        )
-
-    def _create_visualization(
-        self,
-        frame1,
-        frame2,
-        keypoints1_dicts,
-        keypoints2_dicts,
-        good_matches
-    ):
-        frame1 = np.asarray(frame1)
-        frame2 = np.asarray(frame2)
-
-        if frame1.size == 0 or frame2.size == 0:
-            raise ValueError("Visualization frame is empty")
-
-        if frame1.dtype != np.uint8:
-            frame1 = frame1.astype(np.uint8)
-
-        if frame2.dtype != np.uint8:
-            frame2 = frame2.astype(np.uint8)
-
-        if len(frame1.shape) == 2:
-            frame1 = cv2.cvtColor(
-                frame1,
-                cv2.COLOR_GRAY2BGR
-            )
-
-        if len(frame2.shape) == 2:
-            frame2 = cv2.cvtColor(
-                frame2,
-                cv2.COLOR_GRAY2BGR
-            )
-
-        cv_keypoints1 = [
-            cv2.KeyPoint(
-                float(kp["pt"][0]),
-                float(kp["pt"][1]),
-                1.0
-            )
-            for kp in keypoints1_dicts
-        ]
-
-        cv_keypoints2 = [
-            cv2.KeyPoint(
-                float(kp["pt"][0]),
-                float(kp["pt"][1]),
-                1.0
-            )
-            for kp in keypoints2_dicts
-        ]
-
-        # Draw ALL good matches. No custom match-count limit.
-        return cv2.drawMatches(
-            frame1,
-            cv_keypoints1,
-            frame2,
-            cv_keypoints2,
-            list(good_matches),
-            None,
-            flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS
-        )
-
-    def _create_visualization(
-        self,
-        frame1,
-        frame2,
-        keypoints1_dicts,
-        keypoints2_dicts,
-        good_matches,
-    ):
-        if frame1 is None or frame2 is None:
-            raise ValueError("Visualization frame is None")
-
-        frame1 = np.asarray(frame1)
-        frame2 = np.asarray(frame2)
-
-        if frame1.size == 0 or frame2.size == 0:
-            raise ValueError("Visualization frame is empty")
-
-        if frame1.dtype != np.uint8:
-            frame1 = frame1.astype(np.uint8)
-
-        if frame2.dtype != np.uint8:
-            frame2 = frame2.astype(np.uint8)
-
-        if len(frame1.shape) == 2:
-            frame1 = cv2.cvtColor(
-                frame1,
-                cv2.COLOR_GRAY2BGR
-            )
-
-        if len(frame2.shape) == 2:
-            frame2 = cv2.cvtColor(
-                frame2,
-                cv2.COLOR_GRAY2BGR
-            )
-
-        cv_keypoints1 = [
-            cv2.KeyPoint(
-                float(kp["pt"][0]),
-                float(kp["pt"][1]),
-                1.0
-            )
-            for kp in keypoints1_dicts
-        ]
-
-        cv_keypoints2 = [
-            cv2.KeyPoint(
-                float(kp["pt"][0]),
-                float(kp["pt"][1]),
-                1.0
-            )
-            for kp in keypoints2_dicts
-        ]
-
-        limit = self._get_visualization_limit()
-
-        if limit == -1:
-            matches_to_draw = list(good_matches)
-        else:
-            matches_to_draw = sorted(
-                good_matches,
-                key=lambda match: match.distance
-            )[:limit]
-
-        print(
-            "SIFTCOMPARISONTEST - VISUALIZATION LIMIT:",
-            limit,
-            flush=True
-        )
-
-        print(
-            "SIFTCOMPARISONTEST - TOTAL GOOD MATCHES:",
-            len(good_matches),
-            flush=True
-        )
-
-        print(
-            "SIFTCOMPARISONTEST - MATCHES TO DRAW:",
-            len(matches_to_draw),
-            flush=True
-        )
-
-        return cv2.drawMatches(
-            frame1,
-            cv_keypoints1,
-            frame2,
-            cv_keypoints2,
-            matches_to_draw,
-            None,
-            flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS
-        )
-
-    def run(self):
-
-        try:
-
-            # ------------------------------------------------
-            # 1. SIFT output'larını ayırıyoruz.
-            # ------------------------------------------------
-
-            (
-                keypoints1_dicts,
-                descriptors1
-            ) = self._extract_keypoints_and_descriptors(
-                self.sift_output_1
-            )
-
-            (
-                keypoints2_dicts,
-                descriptors2
-            ) = self._extract_keypoints_and_descriptors(
-                self.sift_output_2
-            )
-
-            # ------------------------------------------------
-            # 2. knnMatch(k=2) kullanacağımız için
-            # iki görüntüde de en az 2 descriptor
-            # bulunması gerekiyor.
-            # ------------------------------------------------
-
-            if (
-                len(descriptors1) < 2
-                or len(descriptors2) < 2
-            ):
-
-                self.output_detections = (
-                    self._no_match_result()
-                )
-
-                return build_response_sift_comparison_test(
-                    context=self
-                )
-
-            # ------------------------------------------------
-            # 3. Matcher oluşturuluyor.
-            #
-            # Burada FLANN ve BFMatcher'ı açıkça
-            # birbirinden ayırıyoruz.
-            # ------------------------------------------------
-
-            if self.matcher == "FlannBasedMatcher":
-
-                # SIFT descriptor'ları float olduğu için
-                # FLANN'de KD-Tree kullanıyoruz.
-                index_params = {
-                    "algorithm": 1,
-                    "trees": 5
-                }
-
-                search_params = {
-                    "checks": 50
-                }
-
-                matcher = cv2.FlannBasedMatcher(
-                    index_params,
-                    search_params
-                )
-
-            elif self.matcher == "BFMatcher":
-
-                # BFMatcher bütün descriptor'ları
-                # brute-force olarak karşılaştırır.
-                #
-                # SIFT descriptor'ları için L2 norm kullanılır.
-                matcher = cv2.BFMatcher(
-                    cv2.NORM_L2,
-                    crossCheck=False
-                )
-
-            else:
-
-                # Desteklenmeyen bir matcher gelirse
-                # sessizce FLANN kullanmak yerine hata veriyoruz.
-                raise ValueError(
-                    f"Unsupported matcher: {self.matcher}"
-                )
-
-            # ------------------------------------------------
-            # 4. Her descriptor için en yakın 2 descriptor'ı
-            # buluyoruz.
-            #
-            # k=2 -> Lowe Ratio Test için gerekli.
-            # ------------------------------------------------
-
-            matches = matcher.knnMatch(
-                descriptors1,
-                descriptors2,
-                k=2
-            )
-
-            # Lowe Ratio Test'i geçen eşleşmeler.
-            good_matches = []
-
-            for match_pair in matches:
-
-                # İki eşleşme yoksa ratio testi
-                # yapılamaz.
-                if len(match_pair) < 2:
-                    continue
-
-                m, n = match_pair
-
-                # Lowe Ratio Test.
-                if (
-                    m.distance
-                    < self.ratio_threshold * n.distance
-                ):
-                    good_matches.append(m)
-
-            # ------------------------------------------------
-            # 5. Good match sayısını hesaplıyoruz.
-            # ------------------------------------------------
-
-            good_matches_count = len(
-                good_matches
-            )
-
-            # Threshold'a ulaşıldıysa Match.
-            images_match = (
-                good_matches_count
-                >= self.good_matches_threshold
-            )
-
-            # ------------------------------------------------
-            # 6. İki görüntünün keypoint'lerini
-            # tek listede birleştiriyoruz.
-            # ------------------------------------------------
-
-            all_keypoints_dicts = (
-                keypoints1_dicts
-                + keypoints2_dicts
-            )
-
-            # Image 2 keypoint'lerinin başladığı index.
-            offset = len(
-                keypoints1_dicts
-            )
-
-            # Novavision KeyPoints modeline dönüştürüyoruz.
-            keypoints = [
-                KeyPoints(
-                    cx=float(kp["pt"][0]),
-                    cy=float(kp["pt"][1]),
-                    confidence=1.0
-                )
-                for kp in all_keypoints_dicts
-            ]
-
-            # ------------------------------------------------
-            # 7. Good match'leri Connection nesnelerine
-            # dönüştürüyoruz.
-            #
-            # queryIdx -> image 1
-            # trainIdx -> image 2
-            #
-            # Image 2 keypoint'leri listenin devamında
-            # olduğu için offset ekliyoruz.
-            # ------------------------------------------------
-
-            connections = [
-                Connection(
-                    p1=m.queryIdx,
-                    p2=m.trainIdx + offset
-                )
-                for m in good_matches
-            ]
-
-            # ------------------------------------------------
-            # 8. Final Detection oluşturuluyor.
-            # ------------------------------------------------
-
-            self.output_detections = [
-                Detection(
-                    boundingBox=None,
-
-                    # İki görüntünün keypoint'leri.
-                    keyPoints=keypoints,
-
-                    # Good match bağlantıları.
-                    connections=connections,
-
-                    # Good match sayısını confidence
-                    # olarak kullanıyoruz.
-                    confidence=float(
-                        good_matches_count
-                    ),
-
-                    # Match = 1
-                    # NoMatch = 0
-                    classId=(
-                        1
-                        if images_match
-                        else 0
-                    ),
-
-                    classLabel=(
-                        "Match"
-                        if images_match
-                        else "NoMatch"
-                    ),
-
-                    imgUID=self.uID
-                )
-            ]
-
-            # ------------------------------------------------
-            # ------------------------------------------------
-            # 9. Visualization
-            # ------------------------------------------------
-            # Visualize=True:
-            #   - visualization_1: keypoints of image 1
-            #   - visualization_2: keypoints of image 2
-            #   - visualization_matches: both images with
-            #     all good matches connected
-            #
-            # Visualize=False:
-            #   - no visualization outputs
-            # ------------------------------------------------
-
-            if (
-                self._is_visualization_enabled()
-                and self.visualization_input_1 is not None
-                and self.visualization_input_2 is not None
-            ):
-                image1_frame = Image.get_frame(
-                    img=self.visualization_input_1,
-                    redis_db=self.redis_db
-                )
-
-                image2_frame = Image.get_frame(
-                    img=self.visualization_input_2,
-                    redis_db=self.redis_db
-                )
-
-                if image1_frame is None or image2_frame is None:
-                    raise ValueError(
-                        "Visualization images could not be loaded."
-                    )
-
-                visualization_1 = self._create_keypoint_visualization(
-                    image1_frame.value,
-                    keypoints1_dicts
-                )
-
-                visualization_2 = self._create_keypoint_visualization(
-                    image2_frame.value,
-                    keypoints2_dicts
-                )
-
-                visualization_matches = self._create_visualization(
-                    image1_frame.value,
-                    image2_frame.value,
-                    keypoints1_dicts,
-                    keypoints2_dicts,
-                    good_matches
-                )
-
-                image1_frame.value = visualization_1
-                self.output_visualization_1 = Image.set_frame(
-                    img=image1_frame,
-                    package_uID=self.uID,
-                    redis_db=self.redis_db
-                )
-
-                image2_frame.value = visualization_2
-                self.output_visualization_2 = Image.set_frame(
-                    img=image2_frame,
-                    package_uID=self.uID,
-                    redis_db=self.redis_db
-                )
-
-                image1_frame.value = visualization_matches
-                self.output_visualization_matches = Image.set_frame(
-                    img=image1_frame,
-                    package_uID=self.uID,
-                    redis_db=self.redis_db
-                )
-
-        except Exception as e:
-
-            # Gerçek bir kod hatasını NoMatch olarak
-            # gizlemek yerine terminal/log'a yazıyoruz.
-            print(
-                "SIFT Comparison Error:",
-                repr(e)
-            )
-
-            raise
-
-        # ------------------------------------------------
-        # 9. Response oluşturuluyor.
-        # ------------------------------------------------
-
-        return build_response_sift_comparison_test(
-            context=self
-        )
-
-
-# Executor'ın başlatılması.
-if __name__ == "__main__":
-    Executor(
-        sys.argv[1]
-    ).run()
+class InputSIFTOutput1(Input):
+    name: Literal["InputSIFTOutput1"] = "InputSIFTOutput1"
+    value: Optional[Any] = None
+    type: Literal["object"] = "object"
+
+    class Config:
+        title = "SIFT Output 1"
+
+
+class InputSIFTOutput2(Input):
+    name: Literal["InputSIFTOutput2"] = "InputSIFTOutput2"
+    value: Optional[Any] = None
+    type: Literal["object"] = "object"
+
+    class Config:
+        title = "SIFT Output 2"
+
+
+class InputVisualization1(Input):
+    name: Literal["InputVisualization1"] = "InputVisualization1"
+    value: Optional[Image] = None
+    type: Literal["object"] = "object"
+
+    class Config:
+        title = "Visualization Image 1"
+
+
+class InputVisualization2(Input):
+    name: Literal["InputVisualization2"] = "InputVisualization2"
+    value: Optional[Image] = None
+    type: Literal["object"] = "object"
+
+    class Config:
+        title = "Visualization Image 2"
+
+
+# ============================================================
+# OUTPUTS
+# ============================================================
+
+class OutputDetections(Output):
+    name: Literal["OutputDetections"] = "OutputDetections"
+    value: Optional[Any] = None
+    type: Literal["list"] = "list"
+
+    class Config:
+        title = "Output Detections"
+
+
+class OutputVisualization1(Output):
+    name: Literal["OutputVisualization1"] = "OutputVisualization1"
+    value: Optional[Image] = None
+    type: Literal["object"] = "object"
+
+    class Config:
+        title = "Visualization 1"
+
+
+class OutputVisualization2(Output):
+    name: Literal["OutputVisualization2"] = "OutputVisualization2"
+    value: Optional[Image] = None
+    type: Literal["object"] = "object"
+
+    class Config:
+        title = "Visualization 2"
+
+
+class OutputVisualizationMatches(Output):
+    name: Literal["OutputVisualizationMatches"] = "OutputVisualizationMatches"
+    value: Optional[Image] = None
+    type: Literal["object"] = "object"
+
+    class Config:
+        title = "Visualization Matches"
+
+
+# ============================================================
+# CONFIGS
+# ============================================================
+
+class GoodMatchesThreshold(Config):
+    name: Literal["GoodMatchesThreshold"] = "GoodMatchesThreshold"
+    value: int = Field(default=50, ge=1, le=100000)
+    type: Literal["number"] = "number"
+    field: Literal["textInput"] = "textInput"
+
+    class Config:
+        title = "Good Matches Threshold"
+
+
+class RatioThreshold(Config):
+    name: Literal["RatioThreshold"] = "RatioThreshold"
+    value: float = Field(default=0.7, ge=0.0, le=1.0)
+    type: Literal["number"] = "number"
+    field: Literal["textInput"] = "textInput"
+
+    class Config:
+        title = "Ratio Threshold"
+
+
+class MatcherFlann(Config):
+    name: Literal["FlannBasedMatcher"] = "FlannBasedMatcher"
+    value: Literal["FlannBasedMatcher"] = "FlannBasedMatcher"
+    type: Literal["string"] = "string"
+    field: Literal["option"] = "option"
+
+    class Config:
+        title = "FLANN Based Matcher"
+
+
+class MatcherBF(Config):
+    name: Literal["BFMatcher"] = "BFMatcher"
+    value: Literal["BFMatcher"] = "BFMatcher"
+    type: Literal["string"] = "string"
+    field: Literal["option"] = "option"
+
+    class Config:
+        title = "Brute Force Matcher"
+
+
+class Matcher(Config):
+    name: Literal["Matcher"] = "Matcher"
+    value: Union[MatcherFlann, MatcherBF]
+    type: Literal["object"] = "object"
+    field: Literal["dropdownlist"] = "dropdownlist"
+
+    class Config:
+        title = "Matcher Algorithm"
+
+
+class Visualize(Config):
+    name: Literal["Visualize"] = "Visualize"
+    value: bool = False
+    type: Literal["boolean"] = "boolean"
+    field: Literal["checkbox"] = "checkbox"
+
+    class Config:
+        title = "Visualize"
+        json_schema_extra = {
+            "shortDescription": "Create visualization outputs."
+        }
+
+
+class SiftComparisonTestConfigs(Configs):
+    GoodMatchesThreshold: GoodMatchesThreshold
+    RatioThreshold: RatioThreshold
+    Matcher: Matcher
+    Visualize: Visualize
+
+
+# ============================================================
+# INPUT / OUTPUT MODELS
+# ============================================================
+
+class SiftComparisonTestInputs(Inputs):
+    InputSIFTOutput1: InputSIFTOutput1
+    InputSIFTOutput2: InputSIFTOutput2
+    InputVisualization1: InputVisualization1
+    InputVisualization2: InputVisualization2
+
+
+class SiftComparisonTestOutputs(Outputs):
+    OutputDetections: OutputDetections
+    OutputVisualization1: OutputVisualization1
+    OutputVisualization2: OutputVisualization2
+    OutputVisualizationMatches: OutputVisualizationMatches
+
+
+# ============================================================
+# REQUEST / RESPONSE
+# ============================================================
+
+class SiftComparisonTestRequest(Request):
+    inputs: Optional[SiftComparisonTestInputs] = None
+    configs: SiftComparisonTestConfigs
+
+    class Config:
+        json_schema_extra = {
+            "target": "configs"
+        }
+
+
+class SiftComparisonTestResponse(Response):
+    outputs: SiftComparisonTestOutputs
+
+
+# ============================================================
+# EXECUTOR
+# ============================================================
+
+class SiftComparisonTest(Config):
+    name: Literal["SiftComparisonTest"] = "SiftComparisonTest"
+
+    value: Union[
+        SiftComparisonTestRequest,
+        SiftComparisonTestResponse
+    ]
+
+    type: Literal["object"] = "object"
+    field: Literal["option"] = "option"
+
+    class Config:
+        title = "SIFT Comparison Test"
+        json_schema_extra = {
+            "target": {
+                "value": 0
+            },
+            "shortDescription": "Feature-based image matching."
+        }
+
+
+class ConfigExecutor(Config):
+    name: Literal["ConfigExecutor"] = "ConfigExecutor"
+    value: SiftComparisonTest
+    type: Literal["executor"] = "executor"
+    field: Literal["dependentDropdownlist"] = "dependentDropdownlist"
+
+    class Config:
+        title = "Task"
+        json_schema_extra = {
+            "target": "value"
+        }
+
+
+class PackageConfigs(Configs):
+    executor: ConfigExecutor
+
+
+class PackageModel(Package):
+    name: Literal["SiftComparisonTest"] = "SiftComparisonTest"
+    configs: PackageConfigs
+    type: Literal["component"] = "component"
