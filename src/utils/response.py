@@ -8,7 +8,9 @@ from components.SiftComparisonTest.src.models.PackageModel import (
     SiftComparisonTestResponse,
     SiftComparisonTestOutputs,
     OutputDetections,
-    OutputVisualization,
+    OutputVisualization1,
+    OutputVisualization2,
+    OutputVisualizationMatches,
 )
 
 
@@ -23,13 +25,37 @@ def build_response_sift_comparison_test(context):
     )
 
     # ========================================================
-    # OUTPUT VISUALIZATION
+    # VISUALIZATION 1
     # ========================================================
 
-    output_visualization = OutputVisualization(
+    output_visualization_1 = OutputVisualization1(
         value=getattr(
             context,
-            "output_visualization",
+            "output_visualization_1",
+            None
+        )
+    )
+
+    # ========================================================
+    # VISUALIZATION 2
+    # ========================================================
+
+    output_visualization_2 = OutputVisualization2(
+        value=getattr(
+            context,
+            "output_visualization_2",
+            None
+        )
+    )
+
+    # ========================================================
+    # VISUALIZATION MATCHES
+    # ========================================================
+
+    output_visualization_matches = OutputVisualizationMatches(
+        value=getattr(
+            context,
+            "output_visualization_matches",
             None
         )
     )
@@ -40,7 +66,9 @@ def build_response_sift_comparison_test(context):
 
     outputs = SiftComparisonTestOutputs(
         OutputDetections=output_detections,
-        OutputVisualization=output_visualization
+        OutputVisualization1=output_visualization_1,
+        OutputVisualization2=output_visualization_2,
+        OutputVisualizationMatches=output_visualization_matches
     )
 
     # ========================================================
