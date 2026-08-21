@@ -8,48 +8,60 @@ from components.SiftComparisonTest.src.models.PackageModel import (
     SiftComparisonTestResponse,
     SiftComparisonTestOutputs,
     OutputDetections,
-    OutputVisualization1,
-    OutputVisualization2,
-    OutputVisualizationMatches,
+    OutputVisualization,
 )
 
 
 def build_response_sift_comparison_test(context):
 
-    outputs = SiftComparisonTestOutputs(
-        OutputDetections=OutputDetections(
-            value=context.output_detections
-        ),
-        OutputVisualization1=OutputVisualization1(
-            value=getattr(
-                context,
-                "output_visualization_1",
-                None
-            )
-        ),
-        OutputVisualization2=OutputVisualization2(
-            value=getattr(
-                context,
-                "output_visualization_2",
-                None
-            )
-        ),
-        OutputVisualizationMatches=OutputVisualizationMatches(
-            value=getattr(
-                context,
-                "output_visualization_matches",
-                None
-            )
-        ),
+    # ========================================================
+    # OUTPUT DETECTIONS
+    # ========================================================
+
+    output_detections = OutputDetections(
+        value=context.output_detections
     )
+
+    # ========================================================
+    # OUTPUT VISUALIZATION
+    # ========================================================
+
+    output_visualization = OutputVisualization(
+        value=getattr(
+            context,
+            "output_visualization",
+            None
+        )
+    )
+
+    # ========================================================
+    # OUTPUTS
+    # ========================================================
+
+    outputs = SiftComparisonTestOutputs(
+        OutputDetections=output_detections,
+        OutputVisualization=output_visualization
+    )
+
+    # ========================================================
+    # RESPONSE
+    # ========================================================
 
     response = SiftComparisonTestResponse(
         outputs=outputs
     )
 
+    # ========================================================
+    # EXECUTOR
+    # ========================================================
+
     executor = SiftComparisonTest(
         value=response
     )
+
+    # ========================================================
+    # PACKAGE CONFIG
+    # ========================================================
 
     config_executor = ConfigExecutor(
         value=executor
@@ -58,6 +70,10 @@ def build_response_sift_comparison_test(context):
     package_configs = PackageConfigs(
         executor=config_executor
     )
+
+    # ========================================================
+    # PACKAGE
+    # ========================================================
 
     package = PackageHelper(
         packageModel=PackageModel,
