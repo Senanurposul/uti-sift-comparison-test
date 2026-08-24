@@ -1,13 +1,14 @@
 import os
 import sys
 import json
+
 import cv2
 import numpy as np
 
 sys.path.append(
     os.path.join(
         os.path.dirname(__file__),
-        '../../../../'
+        "../../../../"
     )
 )
 
@@ -16,12 +17,12 @@ from sdks.novavision.src.base.component import Component
 from sdks.novavision.src.base.model import (
     KeyPoints,
     Detection,
-    Connection
+    Connection,
 )
 from sdks.novavision.src.helper.executor import Executor
 
 from components.SiftComparisonTest.src.utils.response import (
-    build_response_sift_comparison_test
+    build_response_sift_comparison_test,
 )
 
 
@@ -32,31 +33,41 @@ class SiftComparisonTest(Component):
 
         self.request.model = __import__(
             "components.SiftComparisonTest.src.models.PackageModel",
-            fromlist=["PackageModel"]
+            fromlist=["PackageModel"],
         ).PackageModel(**self.request.data)
 
         self.good_matches_threshold = self.request.get_param(
             "GoodMatchesThreshold"
         )
+
         self.ratio_threshold = self.request.get_param(
             "RatioThreshold"
         )
+
         self.matcher = self.request.get_param("Matcher")
 
-        # Roboflow-style visualize flag.
+        # Roboflow-compatible boolean visualization flag.
         visualize = self.request.get_param("Visualize")
+
         if isinstance(visualize, bool):
             self.visualize = visualize
+
         elif isinstance(visualize, str):
             self.visualize = visualize.strip().lower() in (
-                "true", "1", "yes", "on"
+                "true",
+                "1",
+                "yes",
+                "on",
+                "visualizetrue",
             )
+
         else:
-            self.visualize = True
+            self.visualize = False
 
         self.visualization_input_1 = self.request.get_param(
             "InputVisualization1"
         )
+
         self.visualization_input_2 = self.request.get_param(
             "InputVisualization2"
         )
@@ -64,6 +75,7 @@ class SiftComparisonTest(Component):
         self.sift_output_1 = self.request.get_param(
             "InputSIFTOutput1"
         )
+
         self.sift_output_2 = self.request.get_param(
             "InputSIFTOutput2"
         )
@@ -91,23 +103,29 @@ class SiftComparisonTest(Component):
                 if "descriptor" not in kp:
                     continue
 
-                keypoints_dicts.append({
-                    "pt": (
-                        float(kp["cx"]),
-                        float(kp["cy"])
-                    )
-                })
+                keypoints_dicts.append(
+                    {
+                        "pt": (
+                            float(kp["cx"]),
+                            float(kp["cy"]),
+                        )
+                    }
+                )
+
                 descriptors.append(kp["descriptor"])
 
         if not descriptors:
             return (
                 keypoints_dicts,
-                np.empty((0, 128), dtype=np.float32)
+                np.empty(
+                    (0, 128),
+                    dtype=np.float32,
+                ),
             )
 
         descriptors = np.asarray(
             descriptors,
-            dtype=np.float32
+            dtype=np.float32,
         )
 
         return keypoints_dicts, descriptors
@@ -121,7 +139,7 @@ class SiftComparisonTest(Component):
                 confidence=0.0,
                 classId=0,
                 classLabel="NoMatch",
-                imgUID=self.uID
+                imgUID=self.uID,
             )
         ]
 
@@ -138,19 +156,23 @@ class SiftComparisonTest(Component):
         if len(frame.shape) == 2:
             frame = cv2.cvtColor(
                 frame,
-                cv2.COLOR_GRAY2BGR
+                cv2.COLOR_GRAY2BGR,
             )
 
         return frame
 
-    def _create_visualization_1(self, frame, keypoints):
+    def _create_keypoint_visualization(
+        self,
+        frame,
+        keypoints,
+    ):
         frame = self._prepare_frame(frame)
 
         cv_keypoints = [
             cv2.KeyPoint(
                 float(kp["pt"][0]),
                 float(kp["pt"][1]),
-                1.0
+                1.0,
             )
             for kp in keypoints
         ]
@@ -159,26 +181,7 @@ class SiftComparisonTest(Component):
             frame,
             cv_keypoints,
             None,
-            flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS
-        )
-
-    def _create_visualization_2(self, frame, keypoints):
-        frame = self._prepare_frame(frame)
-
-        cv_keypoints = [
-            cv2.KeyPoint(
-                float(kp["pt"][0]),
-                float(kp["pt"][1]),
-                1.0
-            )
-            for kp in keypoints
-        ]
-
-        return cv2.drawKeypoints(
-            frame,
-            cv_keypoints,
-            None,
-            flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS
+            flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS,
         )
 
     def _create_visualization_matches(
@@ -187,7 +190,7 @@ class SiftComparisonTest(Component):
         frame2,
         keypoints1,
         keypoints2,
-        good_matches
+        good_matches,
     ):
         frame1 = self._prepare_frame(frame1)
         frame2 = self._prepare_frame(frame2)
@@ -196,7 +199,7 @@ class SiftComparisonTest(Component):
             cv2.KeyPoint(
                 float(kp["pt"][0]),
                 float(kp["pt"][1]),
-                1.0
+                1.0,
             )
             for kp in keypoints1
         ]
@@ -205,13 +208,13 @@ class SiftComparisonTest(Component):
             cv2.KeyPoint(
                 float(kp["pt"][0]),
                 float(kp["pt"][1]),
-                1.0
+                1.0,
             )
             for kp in keypoints2
         ]
 
-        # Roboflow-style: visualize all good matches that
-        # passed Lowe's ratio test. No extra match-count limit.
+        # Draw all good matches that passed
+        # Lowe's ratio test.
         return cv2.drawMatches(
             frame1,
             cv_keypoints1,
@@ -219,29 +222,30 @@ class SiftComparisonTest(Component):
             cv_keypoints2,
             list(good_matches),
             None,
-            flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS
+            flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS,
         )
 
     def _make_image_output(self, frame):
         frame.value = frame.value.astype(np.uint8)
+
         return Image.set_frame(
             img=frame,
             package_uID=self.uID,
-            redis_db=self.redis_db
+            redis_db=self.redis_db,
         )
 
     def run(self):
         try:
             (
                 keypoints1_dicts,
-                descriptors1
+                descriptors1,
             ) = self._extract_keypoints_and_descriptors(
                 self.sift_output_1
             )
 
             (
                 keypoints2_dicts,
-                descriptors2
+                descriptors2,
             ) = self._extract_keypoints_and_descriptors(
                 self.sift_output_2
             )
@@ -251,6 +255,7 @@ class SiftComparisonTest(Component):
                 or len(descriptors2) < 2
             ):
                 self.output_detections = self._no_match_result()
+
                 return build_response_sift_comparison_test(
                     context=self
                 )
@@ -258,20 +263,22 @@ class SiftComparisonTest(Component):
             if self.matcher == "FlannBasedMatcher":
                 index_params = {
                     "algorithm": 1,
-                    "trees": 5
+                    "trees": 5,
                 }
+
                 search_params = {
-                    "checks": 50
+                    "checks": 50,
                 }
+
                 matcher = cv2.FlannBasedMatcher(
                     index_params,
-                    search_params
+                    search_params,
                 )
 
             elif self.matcher == "BFMatcher":
                 matcher = cv2.BFMatcher(
                     cv2.NORM_L2,
-                    crossCheck=False
+                    crossCheck=False,
                 )
 
             else:
@@ -282,7 +289,7 @@ class SiftComparisonTest(Component):
             matches = matcher.knnMatch(
                 descriptors1,
                 descriptors2,
-                k=2
+                k=2,
             )
 
             good_matches = []
@@ -317,7 +324,7 @@ class SiftComparisonTest(Component):
                 KeyPoints(
                     cx=float(kp["pt"][0]),
                     cy=float(kp["pt"][1]),
-                    confidence=1.0
+                    confidence=1.0,
                 )
                 for kp in all_keypoints_dicts
             ]
@@ -325,7 +332,7 @@ class SiftComparisonTest(Component):
             connections = [
                 Connection(
                     p1=m.queryIdx,
-                    p2=m.trainIdx + offset
+                    p2=m.trainIdx + offset,
                 )
                 for m in good_matches
             ]
@@ -344,13 +351,13 @@ class SiftComparisonTest(Component):
                         if images_match
                         else "NoMatch"
                     ),
-                    imgUID=self.uID
+                    imgUID=self.uID,
                 )
             ]
 
-            # Visualization is controlled only by Roboflow-style
-            # visualize=True/False. When True and both images
-            # are connected, produce all three images.
+            # Generate visualizations only when:
+            # 1. Visualize is True
+            # 2. Both visualization inputs exist
             if (
                 self.visualize
                 and self.visualization_input_1 is not None
@@ -358,11 +365,12 @@ class SiftComparisonTest(Component):
             ):
                 image1_frame = Image.get_frame(
                     img=self.visualization_input_1,
-                    redis_db=self.redis_db
+                    redis_db=self.redis_db,
                 )
+
                 image2_frame = Image.get_frame(
                     img=self.visualization_input_2,
-                    redis_db=self.redis_db
+                    redis_db=self.redis_db,
                 )
 
                 if (
@@ -371,47 +379,63 @@ class SiftComparisonTest(Component):
                     and image1_frame.value is not None
                     and image2_frame.value is not None
                 ):
-                    vis1 = self._create_visualization_1(
-                        image1_frame.value,
-                        keypoints1_dicts
-                    )
-                    vis2 = self._create_visualization_2(
-                        image2_frame.value,
-                        keypoints2_dicts
-                    )
-                    vis_matches = self._create_visualization_matches(
-                        image1_frame.value,
-                        image2_frame.value,
-                        keypoints1_dicts,
-                        keypoints2_dicts,
-                        good_matches
+                    visualization_1 = (
+                        self._create_keypoint_visualization(
+                            image1_frame.value,
+                            keypoints1_dicts,
+                        )
                     )
 
-                    image1_frame.value = vis1
-                    image2_frame.value = vis2
+                    visualization_2 = (
+                        self._create_keypoint_visualization(
+                            image2_frame.value,
+                            keypoints2_dicts,
+                        )
+                    )
 
-                    # Use a fresh frame for the side-by-side image.
+                    visualization_matches = (
+                        self._create_visualization_matches(
+                            image1_frame.value,
+                            image2_frame.value,
+                            keypoints1_dicts,
+                            keypoints2_dicts,
+                            good_matches,
+                        )
+                    )
+
+                    image1_frame.value = visualization_1
+                    image2_frame.value = visualization_2
+
                     matches_frame = Image.get_frame(
                         img=self.visualization_input_1,
-                        redis_db=self.redis_db
+                        redis_db=self.redis_db,
                     )
-                    matches_frame.value = vis_matches
+
+                    matches_frame.value = visualization_matches
 
                     self.output_visualization_1 = (
-                        self._make_image_output(image1_frame)
+                        self._make_image_output(
+                            image1_frame
+                        )
                     )
+
                     self.output_visualization_2 = (
-                        self._make_image_output(image2_frame)
+                        self._make_image_output(
+                            image2_frame
+                        )
                     )
+
                     self.output_visualization_matches = (
-                        self._make_image_output(matches_frame)
+                        self._make_image_output(
+                            matches_frame
+                        )
                     )
 
         except Exception as e:
             print(
                 "SIFT Comparison Error:",
                 repr(e),
-                flush=True
+                flush=True,
             )
             raise
 
