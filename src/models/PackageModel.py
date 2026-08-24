@@ -1,24 +1,6 @@
-from typing import Optional, Union, Literal, Any
-
+from typing import Any, Literal, Optional, Union
 from pydantic import Field
-
-from sdks.novavision.src.base.model import (
-    Package,
-    Image,
-    Inputs,
-    Outputs,
-    Configs,
-    Response,
-    Request,
-    Output,
-    Input,
-    Config,
-)
-
-
-# ============================================================
-# INPUTS
-# ============================================================
+from sdks.novavision.src.base.model import (Package,Image,Inputs,Outputs,Configs,Response,Request,Output,Input,Config,)
 
 class InputSIFTOutput1(Input):
     name: Literal["InputSIFTOutput1"] = "InputSIFTOutput1"
@@ -56,10 +38,6 @@ class InputVisualization2(Input):
         title = "Visualization 2"
 
 
-# ============================================================
-# OUTPUTS
-# ============================================================
-
 class OutputDetections(Output):
     name: Literal["OutputDetections"] = "OutputDetections"
     value: Optional[Any] = None
@@ -88,9 +66,7 @@ class OutputVisualization2(Output):
 
 
 class OutputVisualizationMatches(Output):
-    name: Literal["OutputVisualizationMatches"] = (
-        "OutputVisualizationMatches"
-    )
+    name: Literal["OutputVisualizationMatches"] = "OutputVisualizationMatches"
     value: Optional[Image] = None
     type: Literal["object"] = "object"
 
@@ -98,66 +74,35 @@ class OutputVisualizationMatches(Output):
         title = "Visualization Matches"
 
 
-# ============================================================
-# GOOD MATCHES THRESHOLD
-# ============================================================
-
 class GoodMatchesThreshold(Config):
     name: Literal["GoodMatchesThreshold"] = "GoodMatchesThreshold"
-
-    value: int = Field(
-        default=50,
-        ge=1,
-        le=100000,
-    )
-
+    value: int = Field(default=50, ge=1, le=100000)
     type: Literal["number"] = "number"
     field: Literal["textInput"] = "textInput"
 
     class Config:
         title = "Good Matches Threshold"
-
         json_schema_extra = {
-            "shortDescription": (
-                "Minimum matches to consider a match."
-            )
+            "shortDescription": "Minimum matches to consider a match."
         }
 
 
-# ============================================================
-# RATIO THRESHOLD
-# ============================================================
-
 class RatioThreshold(Config):
     name: Literal["RatioThreshold"] = "RatioThreshold"
-
-    value: float = Field(
-        default=0.7,
-        ge=0.0,
-        le=1.0,
-    )
-
+    value: float = Field(default=0.7, ge=0.0, le=1.0)
     type: Literal["number"] = "number"
     field: Literal["textInput"] = "textInput"
 
     class Config:
         title = "Ratio Threshold"
-
         json_schema_extra = {
-            "shortDescription": (
-                "Lowe's ratio test (0.0-1.0)."
-            )
+            "shortDescription": "Lowe's ratio test (0.0-1.0)."
         }
 
-
-# ============================================================
-# MATCHER
-# ============================================================
 
 class MatcherFlann(Config):
     name: Literal["FlannBasedMatcher"] = "FlannBasedMatcher"
     value: Literal["FlannBasedMatcher"] = "FlannBasedMatcher"
-
     type: Literal["string"] = "string"
     field: Literal["option"] = "option"
 
@@ -168,7 +113,6 @@ class MatcherFlann(Config):
 class MatcherBF(Config):
     name: Literal["BFMatcher"] = "BFMatcher"
     value: Literal["BFMatcher"] = "BFMatcher"
-
     type: Literal["string"] = "string"
     field: Literal["option"] = "option"
 
@@ -178,12 +122,7 @@ class MatcherBF(Config):
 
 class Matcher(Config):
     name: Literal["Matcher"] = "Matcher"
-
-    value: Union[
-        MatcherFlann,
-        MatcherBF,
-    ]
-
+    value: Union[MatcherFlann, MatcherBF]
     type: Literal["object"] = "object"
     field: Literal["dropdownlist"] = "dropdownlist"
 
@@ -191,14 +130,9 @@ class Matcher(Config):
         title = "Matcher Algorithm"
 
 
-# ============================================================
-# VISUALIZE
-# ============================================================
-
 class VisualizeTrue(Config):
     name: Literal["True"] = "True"
     value: Literal[True] = True
-
     type: Literal["bool"] = "bool"
     field: Literal["option"] = "option"
 
@@ -209,7 +143,6 @@ class VisualizeTrue(Config):
 class VisualizeFalse(Config):
     name: Literal["False"] = "False"
     value: Literal[False] = False
-
     type: Literal["bool"] = "bool"
     field: Literal["option"] = "option"
 
@@ -219,20 +152,14 @@ class VisualizeFalse(Config):
 
 class Visualize(Config):
     name: Literal["Visualize"] = "Visualize"
-
-    value: Union[
-        VisualizeTrue,
-        VisualizeFalse,
-    ] = Field(
+    value: Union[VisualizeTrue, VisualizeFalse] = Field(
         default_factory=VisualizeFalse
     )
-
     type: Literal["object"] = "object"
     field: Literal["dropdownlist"] = "dropdownlist"
 
     class Config:
         title = "Visualize"
-
         json_schema_extra = {
             "shortDescription": (
                 "Whether to generate visualization_1, "
@@ -241,20 +168,12 @@ class Visualize(Config):
         }
 
 
-# ============================================================
-# CONFIGS
-# ============================================================
-
 class SiftComparisonTestConfigs(Configs):
     GoodMatchesThreshold: GoodMatchesThreshold
     RatioThreshold: RatioThreshold
     Matcher: Matcher
     Visualize: Visualize
 
-
-# ============================================================
-# INPUTS
-# ============================================================
 
 class SiftComparisonTestInputs(Inputs):
     InputSIFTOutput1: InputSIFTOutput1
@@ -263,20 +182,12 @@ class SiftComparisonTestInputs(Inputs):
     InputVisualization2: InputVisualization2
 
 
-# ============================================================
-# OUTPUTS
-# ============================================================
-
 class SiftComparisonTestOutputs(Outputs):
     OutputDetections: OutputDetections
     OutputVisualization1: OutputVisualization1
     OutputVisualization2: OutputVisualization2
     OutputVisualizationMatches: OutputVisualizationMatches
 
-
-# ============================================================
-# REQUEST
-# ============================================================
 
 class SiftComparisonTestRequest(Request):
     inputs: Optional[SiftComparisonTestInputs] = None
@@ -288,79 +199,47 @@ class SiftComparisonTestRequest(Request):
         }
 
 
-# ============================================================
-# RESPONSE
-# ============================================================
-
 class SiftComparisonTestResponse(Response):
     outputs: SiftComparisonTestOutputs
 
 
-# ============================================================
-# EXECUTOR MODEL
-# ============================================================
-
 class SiftComparisonTest(Config):
     name: Literal["SiftComparisonTest"] = "SiftComparisonTest"
-
     value: Union[
         SiftComparisonTestRequest,
         SiftComparisonTestResponse,
     ]
-
     type: Literal["object"] = "object"
     field: Literal["option"] = "option"
 
     class Config:
         title = "SIFT Comparison Test"
-
         json_schema_extra = {
             "target": {
                 "value": 0
             },
-            "shortDescription": (
-                "Feature-based image matching."
-            ),
+            "shortDescription": "Feature-based image matching.",
         }
 
 
-# ============================================================
-# EXECUTOR CONFIG
-# ============================================================
-
 class ConfigExecutor(Config):
     name: Literal["ConfigExecutor"] = "ConfigExecutor"
-
     value: SiftComparisonTest
-
     type: Literal["executor"] = "executor"
-    field: Literal["dependentDropdownlist"] = (
-        "dependentDropdownlist"
-    )
+    field: Literal["dependentDropdownlist"] = "dependentDropdownlist"
 
     class Config:
         title = "Task"
-
         json_schema_extra = {
             "target": "value"
         }
 
 
-# ============================================================
-# PACKAGE CONFIGS
-# ============================================================
-
 class PackageConfigs(Configs):
     executor: ConfigExecutor
 
 
-# ============================================================
-# PACKAGE
-# ============================================================
-
 class PackageModel(Package):
     name: Literal["SiftComparisonTest"] = "SiftComparisonTest"
-
     configs: PackageConfigs
-
     type: Literal["component"] = "component"
