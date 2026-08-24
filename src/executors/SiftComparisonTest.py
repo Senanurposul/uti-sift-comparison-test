@@ -15,15 +15,12 @@ sys.path.append(
 
 
 from sdks.novavision.src.media.image import Image
-
 from sdks.novavision.src.base.component import Component
-
 from sdks.novavision.src.base.model import (
     KeyPoints,
     Detection,
     Connection,
 )
-
 from sdks.novavision.src.helper.executor import Executor
 
 from components.SiftComparisonTest.src.models.PackageModel import (
@@ -148,11 +145,8 @@ class SiftComparisonTest(Component):
         # ====================================================
 
         self.output_visualization_1 = None
-
         self.output_visualization_2 = None
-
         self.output_visualization_matches = None
-
 
     # ========================================================
     # BOOTSTRAP
@@ -165,7 +159,6 @@ class SiftComparisonTest(Component):
 
         return {}
 
-
     # ========================================================
     # SIFT OUTPUT PARSING
     # ========================================================
@@ -176,7 +169,6 @@ class SiftComparisonTest(Component):
     ):
 
         keypoints_dicts = []
-
         descriptors = []
 
         if isinstance(
@@ -247,7 +239,6 @@ class SiftComparisonTest(Component):
             descriptors,
         )
 
-
     # ========================================================
     # NO MATCH RESULT
     # ========================================================
@@ -265,7 +256,6 @@ class SiftComparisonTest(Component):
                 imgUID=self.uID,
             )
         ]
-
 
     # ========================================================
     # FRAME PREPARATION
@@ -303,7 +293,6 @@ class SiftComparisonTest(Component):
 
         return frame
 
-
     # ========================================================
     # CONVERT KEYPOINTS
     # ========================================================
@@ -325,7 +314,6 @@ class SiftComparisonTest(Component):
             )
             for kp in keypoints_dicts
         ]
-
 
     # ========================================================
     # KEYPOINT VISUALIZATION
@@ -351,12 +339,8 @@ class SiftComparisonTest(Component):
             frame,
             cv_keypoints,
             None,
-            flags=(
-                cv2.DRAW_MATCHES_FLAGS
-                .DRAW_RICH_KEYPOINTS
-            ),
+            flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS,
         )
-
 
     # ========================================================
     # MATCH VISUALIZATION
@@ -398,12 +382,8 @@ class SiftComparisonTest(Component):
             cv_keypoints2,
             list(good_matches),
             None,
-            flags=(
-                cv2.DrawMatchesFlags
-                .NOT_DRAW_SINGLE_POINTS
-            ),
+            flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS,
         )
-
 
     # ========================================================
     # IMAGE OUTPUT
@@ -425,7 +405,6 @@ class SiftComparisonTest(Component):
             package_uID=self.uID,
             redis_db=self.redis_db,
         )
-
 
     # ========================================================
     # RUN
