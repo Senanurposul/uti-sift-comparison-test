@@ -1,14 +1,13 @@
 import os
 import sys
 import json
-
 import cv2
 import numpy as np
 
 sys.path.append(
     os.path.join(
         os.path.dirname(__file__),
-        "../../../../",
+        '../../../../'
     )
 )
 
@@ -17,12 +16,22 @@ from sdks.novavision.src.base.component import Component
 from sdks.novavision.src.base.model import (
     KeyPoints,
     Detection,
-    Connection,
+    Connection
 )
 from sdks.novavision.src.helper.executor import Executor
 
 from components.SiftComparisonTest.src.utils.response import (
-    build_response_sift_comparison_test,
+    build_response_sift_comparison_test
+)
+
+# NOT: Önceki bir versiyonda PackageModel burada
+# __import__("components...PackageModel", fromlist=[...])
+# ile dinamik olarak yükleniyordu. Gerçek bir circular
+# import sorunu olmadığı sürece bunun hiçbir avantajı yok
+# (IDE/type-checker desteğini kaybettiriyor); standart
+# import'a geri dönüldü.
+from components.SiftComparisonTest.src.models.PackageModel import (
+    PackageModel
 )
 
 
@@ -31,76 +40,45 @@ class SiftComparisonTest(Component):
     def __init__(self, request, bootstrap):
         super().__init__(request, bootstrap)
 
-        self.request.model = __import__(
-            "components.SiftComparisonTest.src.models.PackageModel",
-            fromlist=["PackageModel"],
-        ).PackageModel(**self.request.data)
+        self.request.model = PackageModel(
+            **self.request.data
+        )
 
         self.good_matches_threshold = self.request.get_param(
             "GoodMatchesThreshold"
         )
-
         self.ratio_threshold = self.request.get_param(
             "RatioThreshold"
         )
-
         self.matcher = self.request.get_param("Matcher")
 
-        # ====================================================
-        # VISUALIZE
-        # ====================================================
-
-        visualize = self.request.get_param("Visualize")
-
-        if isinstance(visualize, bool):
-            self.visualize = visualize
-
-        elif hasattr(visualize, "value"):
-            self.visualize = bool(visualize.value)
-
-        elif isinstance(visualize, str):
-            self.visualize = visualize.strip().lower() in (
-                "true",
-                "1",
-                "yes",
-                "on",
-            )
-
-        else:
-            self.visualize = False
-
-        # ====================================================
-        # INPUTS
-        # ====================================================
-
-        self.visualization_input_1 = (
-            self.request.get_param(
-                "InputVisualization1"
-            )
+        # Roboflow v2 parity: `visualize` artık PackageModel'de
+        # gerçek bir boolean (Field default=False), bu yüzden
+        # burada name/value belirsizliğiyle uğraşmaya gerek
+        # kalmadı. Yine de get_param bir sebeple None dönerse
+        # (örn. eski, bu alanı içermeyen bir kayıtlı flow)
+        # Roboflow'un kendi varsayılanına (False) düşüyoruz.
+        self.visualize = bool(
+            self.request.get_param("Visualize") or False
         )
 
-        self.visualization_input_2 = (
-            self.request.get_param(
-                "InputVisualization2"
-            )
+        self.visualization_input_1 = self.request.get_param(
+            "InputVisualization1"
+        )
+        self.visualization_input_2 = self.request.get_param(
+            "InputVisualization2"
         )
 
-        self.sift_output_1 = (
-            self.request.get_param(
-                "InputSIFTOutput1"
-            )
+        self.sift_output_1 = self.request.get_param(
+            "InputSIFTOutput1"
+        )
+        self.sift_output_2 = self.request.get_param(
+            "InputSIFTOutput2"
         )
 
-        self.sift_output_2 = (
-            self.request.get_param(
-                "InputSIFTOutput2"
-            )
-        )
-
-        # ====================================================
-        # OUTPUTS
-        # ====================================================
-
+        # Roboflow v2 çıktı isimlerine birebir karşılık gelen
+        # attribute'lar. response.py bu isimleri okuyor;
+        # isimler burada değişirse response.py de güncellenmeli.
         self.output_visualization_1 = None
         self.output_visualization_2 = None
         self.output_visualization_matches = None
@@ -109,72 +87,41 @@ class SiftComparisonTest(Component):
     def bootstrap(config: dict) -> dict:
         return {}
 
-    # ========================================================
-    # SIFT OUTPUT PARSING
-    # ========================================================
-
-    def _extract_keypoints_and_descriptors(
-        self,
-        sift_output,
-    ):
+    def _extract_keypoints_and_descriptors(self, sift_output):
         keypoints_dicts = []
         descriptors = []
 
         if isinstance(sift_output, str):
-            sift_output = json.loads(
-                sift_output
-            )
+            sift_output = json.loads(sift_output)
 
         if not isinstance(sift_output, list):
-            raise ValueError(
-                "SIFT output must be a list."
-            )
+            raise ValueError("SIFT output must be a list.")
 
         for detection in sift_output:
-
-            for kp in detection.get(
-                "keyPoints",
-                [],
-            ):
-
+            for kp in detection.get("keyPoints", []):
                 if "descriptor" not in kp:
                     continue
 
-                keypoints_dicts.append(
-                    {
-                        "pt": (
-                            float(kp["cx"]),
-                            float(kp["cy"]),
-                        )
-                    }
-                )
-
-                descriptors.append(
-                    kp["descriptor"]
-                )
+                keypoints_dicts.append({
+                    "pt": (
+                        float(kp["cx"]),
+                        float(kp["cy"])
+                    )
+                })
+                descriptors.append(kp["descriptor"])
 
         if not descriptors:
             return (
                 keypoints_dicts,
-                np.empty(
-                    (0, 128),
-                    dtype=np.float32,
-                ),
+                np.empty((0, 128), dtype=np.float32)
             )
 
         descriptors = np.asarray(
             descriptors,
-            dtype=np.float32,
+            dtype=np.float32
         )
 
-        return (
-            keypoints_dicts,
-            descriptors,
-        )
-
-    # ========================================================
-    # NO MATCH
-    # ========================================================
+        return keypoints_dicts, descriptors
 
     def _no_match_result(self):
         return [
@@ -185,73 +132,66 @@ class SiftComparisonTest(Component):
                 confidence=0.0,
                 classId=0,
                 classLabel="NoMatch",
-                imgUID=self.uID,
+                imgUID=self.uID
             )
         ]
 
-    # ========================================================
-    # FRAME PREPARATION
-    # ========================================================
-
     @staticmethod
     def _prepare_frame(frame):
+        """
+        OpenCV çizim fonksiyonları için ortak ön koşullar:
+        numpy array'e çevir, uint8 yap, grayscale ise BGR'a
+        çevir. Hem keypoint hem match görselleştirmesi
+        tarafından kullanılan tek, tekrarsız (DRY) nokta.
+        """
 
         frame = np.asarray(frame)
 
         if frame.size == 0:
-            raise ValueError(
-                "Visualization frame is empty"
-            )
+            raise ValueError("Visualization frame is empty")
 
         if frame.dtype != np.uint8:
-            frame = frame.astype(
-                np.uint8
-            )
+            frame = frame.astype(np.uint8)
 
         if len(frame.shape) == 2:
             frame = cv2.cvtColor(
                 frame,
-                cv2.COLOR_GRAY2BGR,
+                cv2.COLOR_GRAY2BGR
             )
 
         return frame
 
-    # ========================================================
-    # KEYPOINT VISUALIZATION
-    # ========================================================
-
-    def _create_keypoint_visualization(
-        self,
-        frame,
-        keypoints,
-    ):
-
-        frame = self._prepare_frame(
-            frame
-        )
-
-        cv_keypoints = [
+    @staticmethod
+    def _to_cv_keypoints(keypoints_dicts):
+        return [
             cv2.KeyPoint(
                 float(kp["pt"][0]),
                 float(kp["pt"][1]),
-                1.0,
+                1.0
             )
-            for kp in keypoints
+            for kp in keypoints_dicts
         ]
+
+    def _create_keypoint_visualization(self, frame, keypoints_dicts):
+        """
+        Roboflow v2'nin visualization_1 / visualization_2
+        çıktısının karşılığı: tek bir görüntü üzerinde o
+        görüntüye ait tüm keypoint'leri işaretler.
+
+        NOT: Önceki versiyonda bu mantık _create_visualization_1
+        ve _create_visualization_2 olarak birebir aynı içerikle
+        iki ayrı metotta tekrarlanmıştı; tek metoda indirgendi.
+        """
+
+        frame = self._prepare_frame(frame)
+        cv_keypoints = self._to_cv_keypoints(keypoints_dicts)
 
         return cv2.drawKeypoints(
             frame,
             cv_keypoints,
             None,
-            flags=(
-                cv2.DRAW_MATCHES_FLAGS
-                .DRAW_RICH_KEYPOINTS
-            ),
+            flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS
         )
-
-    # ========================================================
-    # MATCH VISUALIZATION
-    # ========================================================
 
     def _create_visualization_matches(
         self,
@@ -259,34 +199,20 @@ class SiftComparisonTest(Component):
         frame2,
         keypoints1,
         keypoints2,
-        good_matches,
+        good_matches
     ):
+        """
+        Roboflow v2'nin visualization_matches çıktısının
+        karşılığı: iki görüntü yan yana, good match'ler
+        çizgiyle bağlanmış birleşik görsel. Roboflow gibi
+        TÜM good match'leri çizer, sınırlama uygulamaz.
+        """
 
-        frame1 = self._prepare_frame(
-            frame1
-        )
+        frame1 = self._prepare_frame(frame1)
+        frame2 = self._prepare_frame(frame2)
 
-        frame2 = self._prepare_frame(
-            frame2
-        )
-
-        cv_keypoints1 = [
-            cv2.KeyPoint(
-                float(kp["pt"][0]),
-                float(kp["pt"][1]),
-                1.0,
-            )
-            for kp in keypoints1
-        ]
-
-        cv_keypoints2 = [
-            cv2.KeyPoint(
-                float(kp["pt"][0]),
-                float(kp["pt"][1]),
-                1.0,
-            )
-            for kp in keypoints2
-        ]
+        cv_keypoints1 = self._to_cv_keypoints(keypoints1)
+        cv_keypoints2 = self._to_cv_keypoints(keypoints2)
 
         return cv2.drawMatches(
             frame1,
@@ -295,137 +221,75 @@ class SiftComparisonTest(Component):
             cv_keypoints2,
             list(good_matches),
             None,
-            flags=(
-                cv2.DrawMatchesFlags
-                .NOT_DRAW_SINGLE_POINTS
-            ),
+            flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS
         )
 
-    # ========================================================
-    # IMAGE OUTPUT
-    # ========================================================
-
-    def _make_image_output(
-        self,
-        frame,
-    ):
-
-        frame.value = frame.value.astype(
-            np.uint8
-        )
-
+    def _make_image_output(self, frame):
+        frame.value = frame.value.astype(np.uint8)
         return Image.set_frame(
             img=frame,
             package_uID=self.uID,
-            redis_db=self.redis_db,
+            redis_db=self.redis_db
         )
 
-    # ========================================================
-    # RUN
-    # ========================================================
-
     def run(self):
-
         try:
-
-            # ==================================================
-            # EXTRACT SIFT DATA
-            # ==================================================
-
             (
                 keypoints1_dicts,
-                descriptors1,
-            ) = (
-                self._extract_keypoints_and_descriptors(
-                    self.sift_output_1
-                )
+                descriptors1
+            ) = self._extract_keypoints_and_descriptors(
+                self.sift_output_1
             )
 
             (
                 keypoints2_dicts,
-                descriptors2,
-            ) = (
-                self._extract_keypoints_and_descriptors(
-                    self.sift_output_2
-                )
+                descriptors2
+            ) = self._extract_keypoints_and_descriptors(
+                self.sift_output_2
             )
-
-            # ==================================================
-            # NOT ENOUGH DESCRIPTORS
-            # ==================================================
 
             if (
                 len(descriptors1) < 2
                 or len(descriptors2) < 2
             ):
-
-                self.output_detections = (
-                    self._no_match_result()
+                self.output_detections = self._no_match_result()
+                return build_response_sift_comparison_test(
+                    context=self
                 )
 
-                return (
-                    build_response_sift_comparison_test(
-                        context=self
-                    )
-                )
-
-            # ==================================================
-            # MATCHER
-            # ==================================================
-
-            if (
-                self.matcher
-                == "FlannBasedMatcher"
-            ):
-
+            if self.matcher == "FlannBasedMatcher":
                 index_params = {
                     "algorithm": 1,
-                    "trees": 5,
+                    "trees": 5
                 }
-
                 search_params = {
-                    "checks": 50,
+                    "checks": 50
                 }
-
-                matcher = (
-                    cv2.FlannBasedMatcher(
-                        index_params,
-                        search_params,
-                    )
+                matcher = cv2.FlannBasedMatcher(
+                    index_params,
+                    search_params
                 )
 
             elif self.matcher == "BFMatcher":
-
                 matcher = cv2.BFMatcher(
                     cv2.NORM_L2,
-                    crossCheck=False,
+                    crossCheck=False
                 )
 
             else:
-
                 raise ValueError(
-                    f"Unsupported matcher: "
-                    f"{self.matcher}"
+                    f"Unsupported matcher: {self.matcher}"
                 )
-
-            # ==================================================
-            # KNN MATCH
-            # ==================================================
 
             matches = matcher.knnMatch(
                 descriptors1,
                 descriptors2,
-                k=2,
+                k=2
             )
-
-            # ==================================================
-            # LOWE RATIO TEST
-            # ==================================================
 
             good_matches = []
 
             for match_pair in matches:
-
                 if len(match_pair) < 2:
                     continue
 
@@ -433,233 +297,146 @@ class SiftComparisonTest(Component):
 
                 if (
                     m.distance
-                    < self.ratio_threshold
-                    * n.distance
+                    < self.ratio_threshold * n.distance
                 ):
                     good_matches.append(m)
 
-            # ==================================================
-            # MATCH RESULT
-            # ==================================================
-
-            good_matches_count = len(
-                good_matches
-            )
+            good_matches_count = len(good_matches)
 
             images_match = (
                 good_matches_count
                 >= self.good_matches_threshold
             )
 
-            # ==================================================
-            # KEYPOINT OUTPUT
-            # ==================================================
-
             all_keypoints_dicts = (
                 keypoints1_dicts
                 + keypoints2_dicts
             )
 
-            offset = len(
-                keypoints1_dicts
-            )
+            offset = len(keypoints1_dicts)
 
             keypoints = [
                 KeyPoints(
                     cx=float(kp["pt"][0]),
                     cy=float(kp["pt"][1]),
-                    confidence=1.0,
+                    confidence=1.0
                 )
                 for kp in all_keypoints_dicts
             ]
 
-            # ==================================================
-            # CONNECTION OUTPUT
-            # ==================================================
-
             connections = [
                 Connection(
                     p1=m.queryIdx,
-                    p2=m.trainIdx + offset,
+                    p2=m.trainIdx + offset
                 )
                 for m in good_matches
             ]
-
-            # ==================================================
-            # DETECTION OUTPUT
-            # ==================================================
 
             self.output_detections = [
                 Detection(
                     boundingBox=None,
                     keyPoints=keypoints,
                     connections=connections,
-                    confidence=float(
-                        good_matches_count
-                    ),
+                    confidence=float(good_matches_count),
                     classId=(
-                        1
-                        if images_match
-                        else 0
+                        1 if images_match else 0
                     ),
                     classLabel=(
                         "Match"
                         if images_match
                         else "NoMatch"
                     ),
-                    imgUID=self.uID,
+                    imgUID=self.uID
                 )
             ]
 
-            # ==================================================
-            # VISUALIZATION
-            # ==================================================
+            # ------------------------------------------------
+            # Visualization (Roboflow v2 parity)
+            # ------------------------------------------------
+            # Matching mantığı yukarıda hiç değişmedi.
+            # Görselleştirme, Roboflow'daki gibi SADECE
+            # visualize=True VE her iki görüntü de bağlıysa
+            # üretilir.
+            # ------------------------------------------------
 
             if (
                 self.visualize
-                and self.visualization_input_1
-                is not None
-                and self.visualization_input_2
-                is not None
+                and self.visualization_input_1 is not None
+                and self.visualization_input_2 is not None
             ):
-
-                image1_frame = (
-                    Image.get_frame(
-                        img=(
-                            self.visualization_input_1
-                        ),
-                        redis_db=self.redis_db,
-                    )
+                image1_frame = Image.get_frame(
+                    img=self.visualization_input_1,
+                    redis_db=self.redis_db
                 )
-
-                image2_frame = (
-                    Image.get_frame(
-                        img=(
-                            self.visualization_input_2
-                        ),
-                        redis_db=self.redis_db,
-                    )
+                image2_frame = Image.get_frame(
+                    img=self.visualization_input_2,
+                    redis_db=self.redis_db
                 )
 
                 if (
                     image1_frame is not None
                     and image2_frame is not None
-                    and image1_frame.value
-                    is not None
-                    and image2_frame.value
-                    is not None
+                    and image1_frame.value is not None
+                    and image2_frame.value is not None
                 ):
+                    # Orijinal piksel verilerini, üç çıktıyı
+                    # üretirken birbirini ezmeden kullanmak
+                    # için önce ayrı ayrı saklıyoruz.
+                    raw_frame_1 = image1_frame.value
+                    raw_frame_2 = image2_frame.value
 
-                    # ==========================================
-                    # VISUALIZATION 1
-                    # ==========================================
-
-                    visualization_1 = (
-                        self._create_keypoint_visualization(
-                            image1_frame.value,
-                            keypoints1_dicts,
-                        )
+                    vis1 = self._create_keypoint_visualization(
+                        raw_frame_1,
+                        keypoints1_dicts
+                    )
+                    vis2 = self._create_keypoint_visualization(
+                        raw_frame_2,
+                        keypoints2_dicts
+                    )
+                    vis_matches = self._create_visualization_matches(
+                        raw_frame_1,
+                        raw_frame_2,
+                        keypoints1_dicts,
+                        keypoints2_dicts,
+                        good_matches
                     )
 
-                    # ==========================================
-                    # VISUALIZATION 2
-                    # ==========================================
+                    image1_frame.value = vis1
+                    image2_frame.value = vis2
 
-                    visualization_2 = (
-                        self._create_keypoint_visualization(
-                            image2_frame.value,
-                            keypoints2_dicts,
-                        )
+                    # Birleşik görsel için taze bir Image
+                    # nesnesine ihtiyacımız var; image1_frame
+                    # zaten vis1 ile değiştirildi.
+                    matches_frame = Image.get_frame(
+                        img=self.visualization_input_1,
+                        redis_db=self.redis_db
                     )
-
-                    # ==========================================
-                    # MATCH VISUALIZATION
-                    # ==========================================
-
-                    visualization_matches = (
-                        self._create_visualization_matches(
-                            image1_frame.value,
-                            image2_frame.value,
-                            keypoints1_dicts,
-                            keypoints2_dicts,
-                            good_matches,
-                        )
-                    )
-
-                    image1_frame.value = (
-                        visualization_1
-                    )
-
-                    image2_frame.value = (
-                        visualization_2
-                    )
-
-                    matches_frame = (
-                        Image.get_frame(
-                            img=(
-                                self.visualization_input_1
-                            ),
-                            redis_db=self.redis_db,
-                        )
-                    )
-
-                    matches_frame.value = (
-                        visualization_matches
-                    )
-
-                    # ==========================================
-                    # OUTPUT 1
-                    # ==========================================
+                    matches_frame.value = vis_matches
 
                     self.output_visualization_1 = (
-                        self._make_image_output(
-                            image1_frame
-                        )
+                        self._make_image_output(image1_frame)
                     )
-
-                    # ==========================================
-                    # OUTPUT 2
-                    # ==========================================
-
                     self.output_visualization_2 = (
-                        self._make_image_output(
-                            image2_frame
-                        )
+                        self._make_image_output(image2_frame)
                     )
-
-                    # ==========================================
-                    # MATCH OUTPUT
-                    # ==========================================
-
                     self.output_visualization_matches = (
-                        self._make_image_output(
-                            matches_frame
-                        )
+                        self._make_image_output(matches_frame)
                     )
 
         except Exception as e:
-
             print(
                 "SIFT Comparison Error:",
                 repr(e),
-                flush=True,
+                flush=True
             )
-
             raise
 
-        return (
-            build_response_sift_comparison_test(
-                context=self
-            )
+        return build_response_sift_comparison_test(
+            context=self
         )
 
 
-# ============================================================
-# MAIN
-# ============================================================
-
 if __name__ == "__main__":
-
     Executor(
         sys.argv[1]
     ).run()

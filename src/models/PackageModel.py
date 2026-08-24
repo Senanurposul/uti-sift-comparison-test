@@ -1,5 +1,4 @@
 from typing import Optional, Union, Literal, Any
-
 from pydantic import Field
 
 from sdks.novavision.src.base.model import (
@@ -39,6 +38,14 @@ class InputSIFTOutput2(Input):
 
 
 class InputVisualization1(Input):
+    """
+    Roboflow v2'deki input_1'in görsel karşılığı.
+
+    SIFT bu component'te hesaplanmadığı için, görselleştirme
+    yapılabilmesi adına orijinal görüntünün de ayrıca
+    pipeline'da bu bloğa bağlanması gerekiyor.
+    """
+
     name: Literal["InputVisualization1"] = "InputVisualization1"
     value: Optional[Image] = None
     type: Literal["object"] = "object"
@@ -70,6 +77,8 @@ class OutputDetections(Output):
 
 
 class OutputVisualization1(Output):
+    """Roboflow v2 karşılığı: visualization_1."""
+
     name: Literal["OutputVisualization1"] = "OutputVisualization1"
     value: Optional[Image] = None
     type: Literal["object"] = "object"
@@ -79,6 +88,8 @@ class OutputVisualization1(Output):
 
 
 class OutputVisualization2(Output):
+    """Roboflow v2 karşılığı: visualization_2."""
+
     name: Literal["OutputVisualization2"] = "OutputVisualization2"
     value: Optional[Image] = None
     type: Literal["object"] = "object"
@@ -88,6 +99,8 @@ class OutputVisualization2(Output):
 
 
 class OutputVisualizationMatches(Output):
+    """Roboflow v2 karşılığı: visualization_matches."""
+
     name: Literal["OutputVisualizationMatches"] = (
         "OutputVisualizationMatches"
     )
@@ -104,23 +117,14 @@ class OutputVisualizationMatches(Output):
 
 class GoodMatchesThreshold(Config):
     name: Literal["GoodMatchesThreshold"] = "GoodMatchesThreshold"
-
-    value: int = Field(
-        default=50,
-        ge=1,
-        le=100000,
-    )
-
+    value: int = Field(default=50, ge=1, le=100000)
     type: Literal["number"] = "number"
     field: Literal["textInput"] = "textInput"
 
     class Config:
         title = "Good Matches Threshold"
-
         json_schema_extra = {
-            "shortDescription": (
-                "Minimum matches to consider a match."
-            )
+            "shortDescription": "Minimum matches to consider a match."
         }
 
 
@@ -130,23 +134,14 @@ class GoodMatchesThreshold(Config):
 
 class RatioThreshold(Config):
     name: Literal["RatioThreshold"] = "RatioThreshold"
-
-    value: float = Field(
-        default=0.7,
-        ge=0.0,
-        le=1.0,
-    )
-
+    value: float = Field(default=0.7, ge=0.0, le=1.0)
     type: Literal["number"] = "number"
     field: Literal["textInput"] = "textInput"
 
     class Config:
         title = "Ratio Threshold"
-
         json_schema_extra = {
-            "shortDescription": (
-                "Lowe's ratio test (0.0-1.0)."
-            )
+            "shortDescription": "Lowe's ratio test (0.0-1.0)."
         }
 
 
@@ -157,7 +152,6 @@ class RatioThreshold(Config):
 class MatcherFlann(Config):
     name: Literal["FlannBasedMatcher"] = "FlannBasedMatcher"
     value: Literal["FlannBasedMatcher"] = "FlannBasedMatcher"
-
     type: Literal["string"] = "string"
     field: Literal["option"] = "option"
 
@@ -168,7 +162,6 @@ class MatcherFlann(Config):
 class MatcherBF(Config):
     name: Literal["BFMatcher"] = "BFMatcher"
     value: Literal["BFMatcher"] = "BFMatcher"
-
     type: Literal["string"] = "string"
     field: Literal["option"] = "option"
 
@@ -178,12 +171,7 @@ class MatcherBF(Config):
 
 class Matcher(Config):
     name: Literal["Matcher"] = "Matcher"
-
-    value: Union[
-        MatcherFlann,
-        MatcherBF,
-    ]
-
+    value: Union[MatcherFlann, MatcherBF]
     type: Literal["object"] = "object"
     field: Literal["dropdownlist"] = "dropdownlist"
 
@@ -193,55 +181,44 @@ class Matcher(Config):
 
 # ============================================================
 # VISUALIZE
-# NovaVision'ın çalışan bool yapısına uygun
 # ============================================================
 
-class VisualizeTrue(Config):
-    name: Literal["True"] = "True"
-    value: Literal[True] = True
-
-    type: Literal["bool"] = "bool"
-    field: Literal["option"] = "option"
-
-    class Config:
-        title = "True"
-
-
-class VisualizeFalse(Config):
-    name: Literal["False"] = "False"
-    value: Literal[False] = False
-
-    type: Literal["bool"] = "bool"
-    field: Literal["option"] = "option"
-
-    class Config:
-        title = "False"
-
-
 class Visualize(Config):
+    """
+    Roboflow v2'nin `visualize` (boolean) parametresinin
+    BİREBİR karşılığı.
+
+    Roboflow spec:
+        "visualize" (bool): Whether to generate visualizations
+        of keypoints and matches ... Default is False.
+
+    NOT: Önceki bir versiyonda bu alan string tabanlı bir
+    dropdown (VisualizeTrue/VisualizeFalse) olarak
+    modellenmişti. Bu, Roboflow'un gerçek `bool` tipiyle
+    uyumsuzdu ve executor tarafında name/value belirsizliği
+    (get_param'ın "True" mu yoksa "VisualizeTrue" mu
+    döndüreceği net değildi) yaratıyordu. Gerçek bir
+    boolean'a çevrilerek hem Roboflow'a birebir uyum
+    sağlandı hem de bu belirsizlik ortadan kaldırıldı.
+    """
+
     name: Literal["Visualize"] = "Visualize"
-
-    value: Union[
-        VisualizeTrue,
-        VisualizeFalse,
-    ]
-
-    type: Literal["object"] = "object"
-    field: Literal["dropdownlist"] = "dropdownlist"
+    value: bool = False
+    type: Literal["boolean"] = "boolean"
+    field: Literal["checkbox"] = "checkbox"
 
     class Config:
         title = "Visualize"
-
         json_schema_extra = {
             "shortDescription": (
-                "Generate visualization_1, visualization_2, "
-                "and visualization_matches."
+                "Whether to visualize the keypoints and "
+                "matches between the two images."
             )
         }
 
 
 # ============================================================
-# CONFIGS
+# CONFIGS / INPUTS / OUTPUTS
 # ============================================================
 
 class SiftComparisonTestConfigs(Configs):
@@ -251,20 +228,12 @@ class SiftComparisonTestConfigs(Configs):
     Visualize: Visualize
 
 
-# ============================================================
-# INPUTS
-# ============================================================
-
 class SiftComparisonTestInputs(Inputs):
     InputSIFTOutput1: InputSIFTOutput1
     InputSIFTOutput2: InputSIFTOutput2
     InputVisualization1: InputVisualization1
     InputVisualization2: InputVisualization2
 
-
-# ============================================================
-# OUTPUTS
-# ============================================================
 
 class SiftComparisonTestOutputs(Outputs):
     OutputDetections: OutputDetections
@@ -274,7 +243,7 @@ class SiftComparisonTestOutputs(Outputs):
 
 
 # ============================================================
-# REQUEST
+# REQUEST / RESPONSE
 # ============================================================
 
 class SiftComparisonTestRequest(Request):
@@ -286,10 +255,6 @@ class SiftComparisonTestRequest(Request):
             "target": "configs"
         }
 
-
-# ============================================================
-# RESPONSE
-# ============================================================
 
 class SiftComparisonTestResponse(Response):
     outputs: SiftComparisonTestOutputs
@@ -304,7 +269,7 @@ class SiftComparisonTest(Config):
 
     value: Union[
         SiftComparisonTestRequest,
-        SiftComparisonTestResponse,
+        SiftComparisonTestResponse
     ]
 
     type: Literal["object"] = "object"
@@ -312,54 +277,32 @@ class SiftComparisonTest(Config):
 
     class Config:
         title = "SIFT Comparison Test"
-
         json_schema_extra = {
             "target": {
                 "value": 0
             },
-            "shortDescription": (
-                "Feature-based image matching."
-            ),
+            "shortDescription": "Feature-based image matching."
         }
 
 
-# ============================================================
-# EXECUTOR CONFIG
-# ============================================================
-
 class ConfigExecutor(Config):
     name: Literal["ConfigExecutor"] = "ConfigExecutor"
-
     value: SiftComparisonTest
-
     type: Literal["executor"] = "executor"
-    field: Literal["dependentDropdownlist"] = (
-        "dependentDropdownlist"
-    )
+    field: Literal["dependentDropdownlist"] = "dependentDropdownlist"
 
     class Config:
         title = "Task"
-
         json_schema_extra = {
             "target": "value"
         }
 
 
-# ============================================================
-# PACKAGE CONFIGS
-# ============================================================
-
 class PackageConfigs(Configs):
     executor: ConfigExecutor
 
 
-# ============================================================
-# PACKAGE
-# ============================================================
-
 class PackageModel(Package):
     name: Literal["SiftComparisonTest"] = "SiftComparisonTest"
-
     configs: PackageConfigs
-
     type: Literal["component"] = "component"
