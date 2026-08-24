@@ -223,7 +223,9 @@ class Visualize(Config):
     value: Union[
         VisualizeTrue,
         VisualizeFalse,
-    ]
+    ] = Field(
+        default_factory=VisualizeFalse
+    )
 
     type: Literal["object"] = "object"
     field: Literal["dropdownlist"] = "dropdownlist"
