@@ -99,7 +99,7 @@ class OutputVisualizationMatches(Output):
 
 
 # ============================================================
-# CONFIGS
+# GOOD MATCHES THRESHOLD
 # ============================================================
 
 class GoodMatchesThreshold(Config):
@@ -108,7 +108,7 @@ class GoodMatchesThreshold(Config):
     value: int = Field(
         default=50,
         ge=1,
-        le=100000
+        le=100000,
     )
 
     type: Literal["number"] = "number"
@@ -116,10 +116,17 @@ class GoodMatchesThreshold(Config):
 
     class Config:
         title = "Good Matches Threshold"
+
         json_schema_extra = {
-            "shortDescription": "Minimum matches to consider a match."
+            "shortDescription": (
+                "Minimum matches to consider a match."
+            )
         }
 
+
+# ============================================================
+# RATIO THRESHOLD
+# ============================================================
 
 class RatioThreshold(Config):
     name: Literal["RatioThreshold"] = "RatioThreshold"
@@ -127,7 +134,7 @@ class RatioThreshold(Config):
     value: float = Field(
         default=0.7,
         ge=0.0,
-        le=1.0
+        le=1.0,
     )
 
     type: Literal["number"] = "number"
@@ -135,10 +142,17 @@ class RatioThreshold(Config):
 
     class Config:
         title = "Ratio Threshold"
+
         json_schema_extra = {
-            "shortDescription": "Lowe's ratio test (0.0-1.0)."
+            "shortDescription": (
+                "Lowe's ratio test (0.0-1.0)."
+            )
         }
 
+
+# ============================================================
+# MATCHER
+# ============================================================
 
 class MatcherFlann(Config):
     name: Literal["FlannBasedMatcher"] = "FlannBasedMatcher"
@@ -167,7 +181,7 @@ class Matcher(Config):
 
     value: Union[
         MatcherFlann,
-        MatcherBF
+        MatcherBF,
     ]
 
     type: Literal["object"] = "object"
@@ -177,13 +191,43 @@ class Matcher(Config):
         title = "Matcher Algorithm"
 
 
+# ============================================================
+# VISUALIZE
+# NovaVision'ın çalışan bool yapısına uygun
+# ============================================================
+
+class VisualizeTrue(Config):
+    name: Literal["True"] = "True"
+    value: Literal[True] = True
+
+    type: Literal["bool"] = "bool"
+    field: Literal["option"] = "option"
+
+    class Config:
+        title = "True"
+
+
+class VisualizeFalse(Config):
+    name: Literal["False"] = "False"
+    value: Literal[False] = False
+
+    type: Literal["bool"] = "bool"
+    field: Literal["option"] = "option"
+
+    class Config:
+        title = "False"
+
+
 class Visualize(Config):
     name: Literal["Visualize"] = "Visualize"
 
-    value: bool = False
+    value: Union[
+        VisualizeTrue,
+        VisualizeFalse,
+    ]
 
-    type: Literal["boolean"] = "boolean"
-    field: Literal["checkbox"] = "checkbox"
+    type: Literal["object"] = "object"
+    field: Literal["dropdownlist"] = "dropdownlist"
 
     class Config:
         title = "Visualize"
@@ -197,7 +241,7 @@ class Visualize(Config):
 
 
 # ============================================================
-# CONFIGS / INPUTS / OUTPUTS
+# CONFIGS
 # ============================================================
 
 class SiftComparisonTestConfigs(Configs):
@@ -207,12 +251,20 @@ class SiftComparisonTestConfigs(Configs):
     Visualize: Visualize
 
 
+# ============================================================
+# INPUTS
+# ============================================================
+
 class SiftComparisonTestInputs(Inputs):
     InputSIFTOutput1: InputSIFTOutput1
     InputSIFTOutput2: InputSIFTOutput2
     InputVisualization1: InputVisualization1
     InputVisualization2: InputVisualization2
 
+
+# ============================================================
+# OUTPUTS
+# ============================================================
 
 class SiftComparisonTestOutputs(Outputs):
     OutputDetections: OutputDetections
@@ -222,7 +274,7 @@ class SiftComparisonTestOutputs(Outputs):
 
 
 # ============================================================
-# REQUEST / RESPONSE
+# REQUEST
 # ============================================================
 
 class SiftComparisonTestRequest(Request):
@@ -234,6 +286,10 @@ class SiftComparisonTestRequest(Request):
             "target": "configs"
         }
 
+
+# ============================================================
+# RESPONSE
+# ============================================================
 
 class SiftComparisonTestResponse(Response):
     outputs: SiftComparisonTestOutputs
@@ -248,7 +304,7 @@ class SiftComparisonTest(Config):
 
     value: Union[
         SiftComparisonTestRequest,
-        SiftComparisonTestResponse
+        SiftComparisonTestResponse,
     ]
 
     type: Literal["object"] = "object"
@@ -261,7 +317,9 @@ class SiftComparisonTest(Config):
             "target": {
                 "value": 0
             },
-            "shortDescription": "Feature-based image matching."
+            "shortDescription": (
+                "Feature-based image matching."
+            ),
         }
 
 
@@ -275,7 +333,9 @@ class ConfigExecutor(Config):
     value: SiftComparisonTest
 
     type: Literal["executor"] = "executor"
-    field: Literal["dependentDropdownlist"] = "dependentDropdownlist"
+    field: Literal["dependentDropdownlist"] = (
+        "dependentDropdownlist"
+    )
 
     class Config:
         title = "Task"
