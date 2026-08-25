@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import copy
 import cv2
 import numpy as np
 
@@ -29,7 +30,9 @@ class SiftComparisonTest(Component):
         self.good_matches_threshold = self.request.get_param(
             "GoodMatchesThreshold"
         )
-        self.ratio_threshold = self.request.get_param("RatioThreshold")
+        self.ratio_threshold = self.request.get_param(
+            "RatioThreshold"
+        )
         self.matcher = self.request.get_param("Matcher")
 
         visualize = self.request.get_param("Visualize")
@@ -55,8 +58,12 @@ class SiftComparisonTest(Component):
             "InputVisualization2"
         )
 
-        self.sift_output_1 = self.request.get_param("InputSIFTOutput1")
-        self.sift_output_2 = self.request.get_param("InputSIFTOutput2")
+        self.sift_output_1 = self.request.get_param(
+            "InputSIFTOutput1"
+        )
+        self.sift_output_2 = self.request.get_param(
+            "InputSIFTOutput2"
+        )
 
         self.output_visualization_1 = None
         self.output_visualization_2 = None
@@ -89,6 +96,7 @@ class SiftComparisonTest(Component):
                         )
                     }
                 )
+
                 descriptors.append(kp["descriptor"])
 
         if not descriptors:
@@ -99,7 +107,10 @@ class SiftComparisonTest(Component):
 
         return (
             keypoints,
-            np.asarray(descriptors, dtype=np.float32),
+            np.asarray(
+                descriptors,
+                dtype=np.float32,
+            ),
         )
 
     def _no_match_result(self):
@@ -126,7 +137,10 @@ class SiftComparisonTest(Component):
             frame = frame.astype(np.uint8)
 
         if len(frame.shape) == 2:
-            frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+            frame = cv2.cvtColor(
+                frame,
+                cv2.COLOR_GRAY2BGR,
+            )
 
         return frame
 
@@ -141,7 +155,11 @@ class SiftComparisonTest(Component):
             for kp in keypoints
         ]
 
-    def _create_keypoint_visualization(self, frame, keypoints):
+    def _create_keypoint_visualization(
+        self,
+        frame,
+        keypoints,
+    ):
         frame = self._prepare_frame(frame)
         cv_keypoints = self._to_cv_keypoints(keypoints)
 
@@ -211,6 +229,7 @@ class SiftComparisonTest(Component):
                     "algorithm": 1,
                     "trees": 5,
                 }
+
                 search_params = {
                     "checks": 50,
                 }
@@ -245,13 +264,17 @@ class SiftComparisonTest(Component):
 
                 m, n = match_pair
 
-                if m.distance < self.ratio_threshold * n.distance:
+                if (
+                    m.distance
+                    < self.ratio_threshold * n.distance
+                ):
                     good_matches.append(m)
 
             good_matches_count = len(good_matches)
 
             images_match = (
-                good_matches_count >= self.good_matches_threshold
+                good_matches_count
+                >= self.good_matches_threshold
             )
 
             all_keypoints = keypoints1 + keypoints2
@@ -281,7 +304,11 @@ class SiftComparisonTest(Component):
                     connections=connections,
                     confidence=float(good_matches_count),
                     classId=1 if images_match else 0,
-                    classLabel="Match" if images_match else "NoMatch",
+                    classLabel=(
+                        "Match"
+                        if images_match
+                        else "NoMatch"
+                    ),
                     imgUID=self.uID,
                 )
             ]
@@ -295,6 +322,7 @@ class SiftComparisonTest(Component):
                     img=self.visualization_input_1,
                     redis_db=self.redis_db,
                 )
+
                 image2 = Image.get_frame(
                     img=self.visualization_input_2,
                     redis_db=self.redis_db,
@@ -313,17 +341,23 @@ class SiftComparisonTest(Component):
                         frame1,
                         keypoints1,
                     )
+
                     vis2 = self._create_keypoint_visualization(
                         frame2,
                         keypoints2,
                     )
-                    vis_matches = self._create_visualization_matches(
-                        frame1,
-                        frame2,
-                        keypoints1,
-                        keypoints2,
-                        good_matches,
+
+                    vis_matches = (
+                        self._create_visualization_matches(
+                            frame1,
+                            frame2,
+                            keypoints1,
+                            keypoints2,
+                            good_matches,
+                        )
                     )
+
+                    matches_image = copy.deepcopy(image1)
 
                     image1.value = vis1
                     self.output_visualization_1 = (
@@ -335,12 +369,7 @@ class SiftComparisonTest(Component):
                         self._make_image_output(image2)
                     )
 
-                    matches_image = Image.get_frame(
-                        img=self.visualization_input_1,
-                        redis_db=self.redis_db,
-                    )
                     matches_image.value = vis_matches
-
                     self.output_visualization_matches = (
                         self._make_image_output(matches_image)
                     )
@@ -353,7 +382,9 @@ class SiftComparisonTest(Component):
             )
             raise
 
-        return build_response_sift_comparison_test(context=self)
+        return build_response_sift_comparison_test(
+            context=self
+        )
 
 
 if __name__ == "__main__":
